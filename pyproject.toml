@@ -6,10 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "code-review-cli"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["claude-agent-sdk"]
+dependencies = ["claude-agent-sdk>=0.2.137"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[project.scripts]
+code-review = "code_review_cli.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
