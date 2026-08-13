@@ -25,13 +25,14 @@
 ## File Structure
 
 ```
-code_review_cli/
-  __init__.py
-  validation.py    # CLI input validation
-  prompts.py       # shared preamble + per-provider checkout fragments
-  result.py        # ReviewResult dataclass + exit-code mapping
-  runner.py        # per-run workspace lifecycle + Claude Agent SDK invocation
-  cli.py           # argparse entrypoint wiring everything together
+src/
+  code_review_cli/
+    __init__.py
+    validation.py    # CLI input validation
+    prompts.py       # shared preamble + per-provider checkout fragments
+    result.py        # ReviewResult dataclass + exit-code mapping
+    runner.py        # per-run workspace lifecycle + Claude Agent SDK invocation
+    cli.py           # argparse entrypoint wiring everything together
 tests/
   test_validation.py
   test_prompts.py
@@ -42,14 +43,20 @@ pyproject.toml
 README.md
 ```
 
+**Note:** the package lives under `src/` (src layout). `pyproject.toml` must declare
+`[build-system]` (setuptools>=68, `setuptools.build_meta`) and
+`[tool.setuptools.packages.find]` with `where = ["src"]` so `pip install -e .` and
+pytest resolve `code_review_cli` correctly. The importable package name is always
+`code_review_cli` regardless of its physical path under `src/`.
+
 ---
 
 ### Task 1: Input validation + project scaffold
 
 **Files:**
 - Create: `pyproject.toml`
-- Create: `code_review_cli/__init__.py`
-- Create: `code_review_cli/validation.py`
+- Create: `src/code_review_cli/__init__.py`
+- Create: `src/code_review_cli/validation.py`
 - Test: `tests/test_validation.py`
 
 **Interfaces:**
@@ -60,6 +67,10 @@ README.md
 `pyproject.toml`:
 
 ```toml
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "code-review-cli"
 version = "0.1.0"
@@ -69,11 +80,26 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 ```
 
-`code_review_cli/__init__.py`:
+`.gitignore`:
+
+```
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+```
+
+`src/code_review_cli/__init__.py`:
 
 ```python
 ```
@@ -161,6 +187,11 @@ def test_validate_repo_rejects_github_leading_dash_segment():
 def test_validate_repo_rejects_codecommit_leading_dash():
     with pytest.raises(ValidationError):
         validate_repo("codecommit", "--profile")
+
+
+def test_validate_repo_rejects_unrecognized_provider():
+    with pytest.raises(ValidationError):
+        validate_repo("bitbucket", "org/repo")
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -177,8 +208,6 @@ import re
 
 VALID_PROVIDERS = {"github", "codecommit"}
 
-# First character excludes "-"/"." so a repo identifier can never be shaped like
-# a CLI flag (e.g. "--foo") once spliced into a gh/git command in the prompt.
 _SEGMENT = r"[A-Za-z0-9_][\w.-]*"
 _GITHUB_REPO_RE = re.compile(rf"^(github\.com/)?{_SEGMENT}/{_SEGMENT}$")
 _CODECOMMIT_REPO_RE = re.compile(rf"^{_SEGMENT}$")
@@ -206,9 +235,18 @@ def validate_pr(pr: str) -> int:
     return value
 
 
+_REPO_PATTERNS = {
+    "github": _GITHUB_REPO_RE,
+    "codecommit": _CODECOMMIT_REPO_RE,
+}
+
+
 def validate_repo(provider: str, repo: str) -> str:
-    pattern = _GITHUB_REPO_RE if provider == "github" else _CODECOMMIT_REPO_RE
-    # fullmatch, not match: "$" alone would still let a trailing "\n" through.
+    pattern = _REPO_PATTERNS.get(provider)
+    if pattern is None:
+        raise ValidationError(
+            f"--repo cannot be validated: unrecognized provider {provider!r}"
+        )
     if not pattern.fullmatch(repo):
         raise ValidationError(
             f"--repo {repo!r} is not a valid {provider} repository identifier"
@@ -219,12 +257,12 @@ def validate_repo(provider: str, repo: str) -> str:
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `pytest tests/test_validation.py -v`
-Expected: PASS (15 passed)
+Expected: PASS (16 passed)
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add pyproject.toml code_review_cli/__init__.py code_review_cli/validation.py tests/test_validation.py
+git add pyproject.toml .gitignore src/code_review_cli/__init__.py src/code_review_cli/validation.py tests/test_validation.py
 git commit -m "feat: add CLI input validation for repo/pr/provider"
 ```
 
@@ -233,7 +271,7 @@ git commit -m "feat: add CLI input validation for repo/pr/provider"
 ### Task 2: Prompt construction
 
 **Files:**
-- Create: `code_review_cli/prompts.py`
+- Create: `src/code_review_cli/prompts.py`
 - Test: `tests/test_prompts.py`
 
 **Interfaces:**
@@ -287,7 +325,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'code_review_cli.promp
 
 - [ ] **Step 3: Write the implementation**
 
-`code_review_cli/prompts.py`:
+`src/code_review_cli/prompts.py`:
 
 ```python
 _SHARED_PREAMBLE = """You are running headless, with full read/write access to this \
@@ -342,7 +380,7 @@ Expected: PASS (6 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add code_review_cli/prompts.py tests/test_prompts.py
+git add src/code_review_cli/prompts.py tests/test_prompts.py
 git commit -m "feat: build headless review prompt from shared preamble + provider fragment"
 ```
 
@@ -351,7 +389,7 @@ git commit -m "feat: build headless review prompt from shared preamble + provide
 ### Task 3: Result type
 
 **Files:**
-- Create: `code_review_cli/result.py`
+- Create: `src/code_review_cli/result.py`
 - Test: `tests/test_result.py`
 
 **Interfaces:**
@@ -395,7 +433,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'code_review_cli.resul
 
 - [ ] **Step 3: Write the implementation**
 
-`code_review_cli/result.py`:
+`src/code_review_cli/result.py`:
 
 ```python
 from dataclasses import dataclass
@@ -422,7 +460,7 @@ Expected: PASS (3 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add code_review_cli/result.py tests/test_result.py
+git add src/code_review_cli/result.py tests/test_result.py
 git commit -m "feat: add ReviewResult type with exit-code mapping"
 ```
 
@@ -432,7 +470,7 @@ git commit -m "feat: add ReviewResult type with exit-code mapping"
 
 **Files:**
 - Modify: `pyproject.toml` (add `claude-agent-sdk` dependency)
-- Create: `code_review_cli/runner.py`
+- Create: `src/code_review_cli/runner.py`
 - Test: `tests/test_runner.py`
 
 **Interfaces:**
@@ -630,7 +668,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'code_review_cli.runne
 
 - [ ] **Step 4: Write the implementation**
 
-`code_review_cli/runner.py`:
+`src/code_review_cli/runner.py`:
 
 ```python
 import asyncio
@@ -644,15 +682,10 @@ from claude_agent_sdk import ClaudeAgentOptions, query
 from .prompts import build_prompt
 from .result import ReviewResult
 
-# No human is present to interrupt a runaway headless session; this caps the
-# time/cost a single malformed-but-valid input (or SDK misbehavior) can rack up.
 _MAX_TURNS = 40
 
 
 async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
-    # Everything through the query() loop is inside this try: workspace/options
-    # construction can fail too (disk full, an SDK version mismatch), and the
-    # contract is that run_review() always returns a ReviewResult, never raises.
     try:
         workspace = Path(tempfile.mkdtemp(prefix="code-review-"))
         prompt = build_prompt(provider, repo, pr)
@@ -662,12 +695,10 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
             max_turns=_MAX_TURNS,
         )
 
-        # Duck-typed on purpose: avoids importing the SDK's ResultMessage class
-        # here, so an SDK version bump that renames the class doesn't break this.
         last_message = None
         async for message in query(prompt=prompt, options=options):
             last_message = message
-    except Exception as exc:  # noqa: BLE001 - surfaced to the caller as a failure
+    except Exception as exc:
         return ReviewResult(success=False, text="", error_message=str(exc))
 
     if last_message is None or not hasattr(last_message, "is_error"):
@@ -695,7 +726,6 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
     try:
         shutil.rmtree(workspace)
     except OSError as exc:
-        # Cleanup failing doesn't make the review itself a failure - just say so.
         print(
             f"warning: failed to clean up workspace {workspace}: {exc}",
             file=sys.stderr,
@@ -724,7 +754,7 @@ If a test fails because the installed `claude-agent-sdk` uses different construc
 - [ ] **Step 6: Commit**
 
 ```bash
-git add pyproject.toml code_review_cli/runner.py tests/test_runner.py
+git add pyproject.toml src/code_review_cli/runner.py tests/test_runner.py
 git commit -m "feat: invoke headless Claude Code via the Agent SDK in an isolated workspace"
 ```
 
@@ -733,7 +763,7 @@ git commit -m "feat: invoke headless Claude Code via the Agent SDK in an isolate
 ### Task 5: CLI entrypoint
 
 **Files:**
-- Create: `code_review_cli/cli.py`
+- Create: `src/code_review_cli/cli.py`
 - Test: `tests/test_cli.py`
 
 **Interfaces:**
@@ -809,7 +839,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'code_review_cli.cli'`
 
 - [ ] **Step 3: Write the implementation**
 
-`code_review_cli/cli.py`:
+`src/code_review_cli/cli.py`:
 
 ```python
 import argparse
@@ -827,9 +857,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--repo", required=True)
     parser.add_argument("--pr", required=True)
-    # No choices= here on purpose: argparse's own choices check would raise
-    # SystemExit before validate_provider() ever runs, giving two inconsistent
-    # rejection paths. validate_provider() is the single source of truth.
     parser.add_argument("--provider", required=True)
     return parser
 
@@ -867,7 +894,7 @@ Expected: PASS (3 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add code_review_cli/cli.py tests/test_cli.py
+git add src/code_review_cli/cli.py tests/test_cli.py
 git commit -m "feat: add CLI entrypoint wiring validation, prompt, and headless invocation"
 ```
 
