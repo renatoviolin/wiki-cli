@@ -55,6 +55,8 @@ def test_main_prints_metrics_to_stderr_and_leaves_stdout_untouched(
             num_turns=3,
             input_tokens=1500,
             output_tokens=300,
+            cache_read_tokens=7000,
+            cache_creation_tokens=400,
         ),
     )
 
@@ -67,6 +69,8 @@ def test_main_prints_metrics_to_stderr_and_leaves_stdout_untouched(
     assert "cost=$" in captured.err
     assert "input_tokens=1500" in captured.err
     assert "output_tokens=300" in captured.err
+    assert "cache_read_tokens=7000" in captured.err
+    assert "cache_creation_tokens=400" in captured.err
     assert captured.out.strip() == "all good"
 
 

@@ -10,6 +10,8 @@ class ReviewResult:
     num_turns: int | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_creation_tokens: int | None = None
     error_message: str | None = None
 
     def exit_code(self) -> int:

@@ -40,6 +40,8 @@ def test_run_review_returns_success_result(monkeypatch, tmp_path):
     assert result.num_turns == 4
     assert result.input_tokens is None
     assert result.output_tokens is None
+    assert result.cache_read_tokens is None
+    assert result.cache_creation_tokens is None
 
 
 def test_run_review_aggregates_token_counts_from_model_usage(monkeypatch, tmp_path):
@@ -58,8 +60,8 @@ def test_run_review_aggregates_token_counts_from_model_usage(monkeypatch, tmp_pa
             "claude-opus-5": {
                 "inputTokens": 1000,
                 "outputTokens": 200,
-                "cacheReadInputTokens": 0,
-                "cacheCreationInputTokens": 0,
+                "cacheReadInputTokens": 5000,
+                "cacheCreationInputTokens": 300,
                 "webSearchRequests": 0,
                 "costUSD": 0.03,
                 "contextWindow": 200000,
@@ -68,8 +70,8 @@ def test_run_review_aggregates_token_counts_from_model_usage(monkeypatch, tmp_pa
             "claude-haiku-4-5": {
                 "inputTokens": 500,
                 "outputTokens": 100,
-                "cacheReadInputTokens": 0,
-                "cacheCreationInputTokens": 0,
+                "cacheReadInputTokens": 2000,
+                "cacheCreationInputTokens": 100,
                 "webSearchRequests": 0,
                 "costUSD": 0.02,
                 "contextWindow": 200000,
@@ -87,6 +89,8 @@ def test_run_review_aggregates_token_counts_from_model_usage(monkeypatch, tmp_pa
     assert result.success is True
     assert result.input_tokens == 1500
     assert result.output_tokens == 300
+    assert result.cache_read_tokens == 7000
+    assert result.cache_creation_tokens == 400
 
 
 def test_run_review_returns_failure_result_when_claude_reports_error(

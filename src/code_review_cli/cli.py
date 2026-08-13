@@ -18,6 +18,10 @@ def _print_metrics(result: ReviewResult) -> None:
         parts.append(f"input_tokens={result.input_tokens}")
     if result.output_tokens is not None:
         parts.append(f"output_tokens={result.output_tokens}")
+    if result.cache_read_tokens is not None:
+        parts.append(f"cache_read_tokens={result.cache_read_tokens}")
+    if result.cache_creation_tokens is not None:
+        parts.append(f"cache_creation_tokens={result.cache_creation_tokens}")
     if parts:
         print(f"[metrics] {' '.join(parts)}", file=sys.stderr)
 

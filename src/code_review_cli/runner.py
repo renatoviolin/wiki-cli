@@ -81,9 +81,17 @@ async def _run_review_async(
     if model_usage:
         input_tokens = sum(entry.get("inputTokens", 0) for entry in model_usage.values())
         output_tokens = sum(entry.get("outputTokens", 0) for entry in model_usage.values())
+        cache_read_tokens = sum(
+            entry.get("cacheReadInputTokens", 0) for entry in model_usage.values()
+        )
+        cache_creation_tokens = sum(
+            entry.get("cacheCreationInputTokens", 0) for entry in model_usage.values()
+        )
     else:
         input_tokens = None
         output_tokens = None
+        cache_read_tokens = None
+        cache_creation_tokens = None
 
     if last_message.is_error:
         subtype = getattr(last_message, "subtype", None)
@@ -102,6 +110,8 @@ async def _run_review_async(
             num_turns=num_turns,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_creation_tokens=cache_creation_tokens,
             error_message=detail,
         )
 
@@ -118,6 +128,8 @@ async def _run_review_async(
             num_turns=num_turns,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_creation_tokens=cache_creation_tokens,
             error_message=failure_reason or "Claude Code did not complete the review",
         )
 
@@ -131,6 +143,8 @@ async def _run_review_async(
             num_turns=num_turns,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_creation_tokens=cache_creation_tokens,
             error_message="Claude Code reported success but returned an empty review",
         )
 
@@ -150,6 +164,8 @@ async def _run_review_async(
         num_turns=num_turns,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        cache_read_tokens=cache_read_tokens,
+        cache_creation_tokens=cache_creation_tokens,
     )
 
 

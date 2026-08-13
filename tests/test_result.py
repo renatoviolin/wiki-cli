@@ -30,6 +30,10 @@ def test_result_carries_optional_token_counts():
         text="looks good",
         input_tokens=1200,
         output_tokens=340,
+        cache_read_tokens=7000,
+        cache_creation_tokens=400,
     )
     assert result.input_tokens == 1200
     assert result.output_tokens == 340
+    assert result.cache_read_tokens == 7000
+    assert result.cache_creation_tokens == 400
