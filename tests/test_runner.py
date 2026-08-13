@@ -4,9 +4,10 @@ import code_review_cli.runner as runner_module
 from code_review_cli.result import ReviewResult
 
 
-def _fake_query_factory(final_message):
+def _fake_query_factory(*messages):
     async def _fake_query(prompt, options):
-        yield final_message
+        for message in messages:
+            yield message
 
     return _fake_query
 
@@ -279,3 +280,111 @@ def test_run_review_wires_setting_sources_output_format_and_max_turns(
         "schema": runner_module._RESULT_SCHEMA,
     }
     assert options.max_turns == 60
+
+
+def _final_success_message():
+    return types.SimpleNamespace(
+        is_error=False,
+        result="all good",
+        structured_output={
+            "success": True,
+            "review": "all good",
+            "failure_reason": "",
+        },
+        total_cost_usd=0.0,
+        duration_ms=100,
+        num_turns=1,
+    )
+
+
+def test_run_review_verbose_logs_assistant_text_block(monkeypatch, tmp_path, capsys):
+    assistant_message = types.SimpleNamespace(
+        content=[types.SimpleNamespace(text="Looking at the diff now")],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant_message, _final_success_message()),
+    )
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    result = runner_module.run_review("github", "org/repo", 29, verbose=True)
+
+    err = capsys.readouterr().err
+    assert "Looking at the diff now" in err
+    assert result.success is True
+    assert result.text == "all good"
+
+
+def test_run_review_verbose_logs_tool_use_block(monkeypatch, tmp_path, capsys):
+    assistant_message = types.SimpleNamespace(
+        content=[
+            types.SimpleNamespace(id="toolu_1", name="Bash", input={"command": "ls"})
+        ],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant_message, _final_success_message()),
+    )
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    result = runner_module.run_review("github", "org/repo", 29, verbose=True)
+
+    err = capsys.readouterr().err
+    assert "Bash" in err
+    assert result.success is True
+
+
+def test_run_review_default_verbose_produces_no_intermediate_output(
+    monkeypatch, tmp_path, capsys
+):
+    assistant_message = types.SimpleNamespace(
+        content=[types.SimpleNamespace(text="Looking at the diff now")],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant_message, _final_success_message()),
+    )
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    result = runner_module.run_review("github", "org/repo", 29)
+
+    err = capsys.readouterr().err
+    assert "Looking at the diff now" not in err
+    assert result.success is True
+
+
+def test_run_review_verbose_false_explicit_produces_no_intermediate_output(
+    monkeypatch, tmp_path, capsys
+):
+    assistant_message = types.SimpleNamespace(
+        content=[
+            types.SimpleNamespace(id="toolu_1", name="Bash", input={"command": "ls"})
+        ],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant_message, _final_success_message()),
+    )
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    result = runner_module.run_review("github", "org/repo", 29, verbose=False)
+
+    err = capsys.readouterr().err
+    assert "Bash" not in err
+    assert result.success is True

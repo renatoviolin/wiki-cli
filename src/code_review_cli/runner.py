@@ -12,7 +12,40 @@ from .result import ReviewResult
 _MAX_TURNS = 60
 
 
-async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
+def _log_verbose_message(message) -> None:
+    if hasattr(message, "is_error"):
+        print(
+            f"[result] is_error={message.is_error} num_turns={message.num_turns}",
+            file=sys.stderr,
+        )
+    elif hasattr(message, "content") and hasattr(message, "model"):
+        for block in message.content:
+            if hasattr(block, "text"):
+                print(f"[assistant] {block.text}", file=sys.stderr)
+            elif hasattr(block, "name") and hasattr(block, "input"):
+                print(f"[tool call] {block.name}({block.input})", file=sys.stderr)
+            elif hasattr(block, "thinking"):
+                print(f"[thinking] {block.thinking}", file=sys.stderr)
+            else:
+                print(f"[message] {block!r}", file=sys.stderr)
+    elif hasattr(message, "content"):
+        if isinstance(message.content, str):
+            print(f"[user] {message.content}", file=sys.stderr)
+        else:
+            for block in message.content:
+                if hasattr(block, "tool_use_id"):
+                    print(f"[tool result] {block.content}", file=sys.stderr)
+                else:
+                    print(repr(block), file=sys.stderr)
+    elif hasattr(message, "subtype") and hasattr(message, "data"):
+        print(f"[system:{message.subtype}] {message.data}", file=sys.stderr)
+    else:
+        print(f"[message] {message!r}", file=sys.stderr)
+
+
+async def _run_review_async(
+    provider: str, repo: str, pr: int, verbose: bool
+) -> ReviewResult:
     try:
         workspace = Path(tempfile.mkdtemp(prefix="code-review-"))
         prompt = build_prompt(provider, repo, pr)
@@ -26,6 +59,8 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
 
         last_message = None
         async for message in query(prompt=prompt, options=options):
+            if verbose:
+                _log_verbose_message(message)
             if hasattr(message, "is_error"):
                 last_message = message
     except Exception as exc:
@@ -102,8 +137,10 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
     )
 
 
-def run_review(provider: str, repo: str, pr: int) -> ReviewResult:
+def run_review(
+    provider: str, repo: str, pr: int, verbose: bool = False
+) -> ReviewResult:
     try:
-        return asyncio.run(_run_review_async(provider, repo, pr))
+        return asyncio.run(_run_review_async(provider, repo, pr, verbose))
     except Exception as exc:
         return ReviewResult(success=False, text="", error_message=str(exc))

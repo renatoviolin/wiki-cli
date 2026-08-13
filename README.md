@@ -34,6 +34,14 @@ pip install -e .
 python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github
 ```
 
+An optional `--verbose` flag streams a human-readable line per SDK message to
+stderr, live, as the headless Claude Code run progresses. It has no effect on
+stdout, which always carries only the final review text on success.
+
+```bash
+python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --verbose
+```
+
 On success, the review text is printed to stdout and the process exits 0.
 On failure (invalid input, or Claude Code failing to complete the review),
 an error is printed to stderr and the process exits non-zero (`2` for input

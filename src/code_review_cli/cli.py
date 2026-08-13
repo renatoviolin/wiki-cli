@@ -14,6 +14,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo", required=True)
     parser.add_argument("--pr", required=True)
     parser.add_argument("--provider", required=True)
+    parser.add_argument("--verbose", action="store_true")
     return parser
 
 
@@ -28,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    result: ReviewResult = run_review(provider, repo, pr)
+    result: ReviewResult = run_review(provider, repo, pr, verbose=args.verbose)
 
     if result.success:
         print(result.text)
