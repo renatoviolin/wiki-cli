@@ -733,7 +733,7 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
 
     return ReviewResult(
         success=True,
-        text=last_message.result or "",
+        text=getattr(last_message, "result", None) or "",
         cost_usd=cost_usd,
         duration_ms=duration_ms,
         num_turns=num_turns,
