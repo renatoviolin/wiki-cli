@@ -12,6 +12,14 @@ checks out the PR itself (via `gh`/`git`/`aws`) and runs the review.
   this environment
 - `gh` authenticated (for `--provider github`) or AWS credentials/region
   configured (for `--provider codecommit`)
+- A `/code-review` skill available to Claude Code in the target environment
+  — this tool does not define or install that skill, it only invokes it by
+  name
+
+`--provider` accepts exactly two values:
+
+- `github`
+- `codecommit`
 
 ## Install
 
@@ -28,7 +36,9 @@ python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider
 On success, the review text is printed to stdout and the process exits 0.
 On failure (invalid input, or Claude Code failing to complete the review),
 an error is printed to stderr and the process exits non-zero (`2` for input
-validation failures, `1` for a failed review run).
+validation failures, `1` for a failed review run). A failed run leaves its
+temporary workspace in place on disk rather than deleting it, so it can be
+inspected for post-mortem debugging.
 
 ## Scope
 
