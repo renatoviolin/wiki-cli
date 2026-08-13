@@ -76,3 +76,8 @@ def test_validate_repo_rejects_github_leading_dash_segment():
 def test_validate_repo_rejects_codecommit_leading_dash():
     with pytest.raises(ValidationError):
         validate_repo("codecommit", "--profile")
+
+
+def test_validate_repo_rejects_unrecognized_provider():
+    with pytest.raises(ValidationError):
+        validate_repo("bitbucket", "org/repo")
