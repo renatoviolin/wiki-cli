@@ -38,6 +38,55 @@ def test_run_review_returns_success_result(monkeypatch, tmp_path):
     assert result.cost_usd == 0.05
     assert result.duration_ms == 3200
     assert result.num_turns == 4
+    assert result.input_tokens is None
+    assert result.output_tokens is None
+
+
+def test_run_review_aggregates_token_counts_from_model_usage(monkeypatch, tmp_path):
+    final_message = types.SimpleNamespace(
+        is_error=False,
+        result="All good",
+        structured_output={
+            "success": True,
+            "review": "All good",
+            "failure_reason": "",
+        },
+        total_cost_usd=0.05,
+        duration_ms=3000,
+        num_turns=3,
+        model_usage={
+            "claude-opus-5": {
+                "inputTokens": 1000,
+                "outputTokens": 200,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 0.03,
+                "contextWindow": 200000,
+                "maxOutputTokens": 8192,
+            },
+            "claude-haiku-4-5": {
+                "inputTokens": 500,
+                "outputTokens": 100,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 0.02,
+                "contextWindow": 200000,
+                "maxOutputTokens": 8192,
+            },
+        },
+    )
+    monkeypatch.setattr(runner_module, "query", _fake_query_factory(final_message))
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    result = runner_module.run_review("github", "org/repo", 29)
+
+    assert result.success is True
+    assert result.input_tokens == 1500
+    assert result.output_tokens == 300
 
 
 def test_run_review_returns_failure_result_when_claude_reports_error(

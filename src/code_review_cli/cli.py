@@ -6,6 +6,22 @@ from .runner import run_review
 from .validation import ValidationError, validate_pr, validate_provider, validate_repo
 
 
+def _print_metrics(result: ReviewResult) -> None:
+    parts = []
+    if result.cost_usd is not None:
+        parts.append(f"cost=${result.cost_usd:.4f}")
+    if result.duration_ms is not None:
+        parts.append(f"duration={result.duration_ms}ms")
+    if result.num_turns is not None:
+        parts.append(f"turns={result.num_turns}")
+    if result.input_tokens is not None:
+        parts.append(f"input_tokens={result.input_tokens}")
+    if result.output_tokens is not None:
+        parts.append(f"output_tokens={result.output_tokens}")
+    if parts:
+        print(f"[metrics] {' '.join(parts)}", file=sys.stderr)
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="code-review",
@@ -30,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     result: ReviewResult = run_review(provider, repo, pr, verbose=args.verbose)
+    _print_metrics(result)
 
     if result.success:
         print(result.text)

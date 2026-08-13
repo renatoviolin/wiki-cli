@@ -77,6 +77,14 @@ async def _run_review_async(
     duration_ms = getattr(last_message, "duration_ms", None)
     num_turns = getattr(last_message, "num_turns", None)
 
+    model_usage = getattr(last_message, "model_usage", None)
+    if model_usage:
+        input_tokens = sum(entry.get("inputTokens", 0) for entry in model_usage.values())
+        output_tokens = sum(entry.get("outputTokens", 0) for entry in model_usage.values())
+    else:
+        input_tokens = None
+        output_tokens = None
+
     if last_message.is_error:
         subtype = getattr(last_message, "subtype", None)
         errors = getattr(last_message, "errors", None) or []
@@ -92,6 +100,8 @@ async def _run_review_async(
             cost_usd=cost_usd,
             duration_ms=duration_ms,
             num_turns=num_turns,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             error_message=detail,
         )
 
@@ -106,6 +116,8 @@ async def _run_review_async(
             cost_usd=cost_usd,
             duration_ms=duration_ms,
             num_turns=num_turns,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             error_message=failure_reason or "Claude Code did not complete the review",
         )
 
@@ -117,6 +129,8 @@ async def _run_review_async(
             cost_usd=cost_usd,
             duration_ms=duration_ms,
             num_turns=num_turns,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             error_message="Claude Code reported success but returned an empty review",
         )
 
@@ -134,6 +148,8 @@ async def _run_review_async(
         cost_usd=cost_usd,
         duration_ms=duration_ms,
         num_turns=num_turns,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
     )
 
 

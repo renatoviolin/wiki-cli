@@ -41,6 +41,35 @@ def test_main_prints_error_and_returns_nonzero_on_review_failure(
     assert "timed out" in capsys.readouterr().err
 
 
+def test_main_prints_metrics_to_stderr_and_leaves_stdout_untouched(
+    monkeypatch, capsys
+):
+    monkeypatch.setattr(
+        cli_module,
+        "run_review",
+        lambda provider, repo, pr, verbose=False: ReviewResult(
+            success=True,
+            text="all good",
+            cost_usd=0.05,
+            duration_ms=3000,
+            num_turns=3,
+            input_tokens=1500,
+            output_tokens=300,
+        ),
+    )
+
+    exit_code = cli_module.main(
+        ["--repo", "org/repo", "--pr", "29", "--provider", "github"]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "cost=$" in captured.err
+    assert "input_tokens=1500" in captured.err
+    assert "output_tokens=300" in captured.err
+    assert captured.out.strip() == "all good"
+
+
 def test_main_rejects_invalid_provider_without_invoking_claude(monkeypatch, capsys):
     called = False
 
