@@ -25,9 +25,14 @@ def test_build_prompt_codecommit_uses_aws_codecommit():
 
 def test_build_prompt_states_final_message_is_the_deliverable():
     prompt = build_prompt("github", "renatoviolin/purabackend", 29)
-    assert "final message" in prompt.lower()
+    assert "reply with a json object" in prompt.lower()
 
 
 def test_build_prompt_pins_an_explicit_effort_level():
     prompt = build_prompt("github", "renatoviolin/purabackend", 29)
     assert "effort level `medium`" in prompt
+
+
+def test_build_prompt_forbids_substituting_a_different_repo_or_pr():
+    prompt = build_prompt("github", "renatoviolin/purabackend", 29)
+    assert "do not search for or substitute" in prompt.lower()
