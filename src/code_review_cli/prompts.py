@@ -6,6 +6,7 @@ _RESULT_SCHEMA = {
         "failure_reason": {"type": "string"},
     },
     "required": ["success", "review", "failure_reason"],
+    "additionalProperties": False,
 }
 
 _SHARED_PREAMBLE = """You are running headless, with full read/write access to this \
