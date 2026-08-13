@@ -7,9 +7,9 @@ def test_build_prompt_includes_pr_and_repo():
     assert "29" in prompt
 
 
-def test_build_prompt_invokes_code_review_skill_explicitly():
+def test_build_prompt_dispatches_code_reviewer_subagent_explicitly():
     prompt = build_prompt("github", "renatoviolin/purabackend", 29)
-    assert "/code-review" in prompt
+    assert "voltagent-qa-sec:code-reviewer" in prompt
 
 
 def test_build_prompt_github_uses_gh_pr_checkout():
@@ -26,11 +26,6 @@ def test_build_prompt_codecommit_uses_aws_codecommit():
 def test_build_prompt_states_final_message_is_the_deliverable():
     prompt = build_prompt("github", "renatoviolin/purabackend", 29)
     assert "reply with a json object" in prompt.lower()
-
-
-def test_build_prompt_pins_an_explicit_effort_level():
-    prompt = build_prompt("github", "renatoviolin/purabackend", 29)
-    assert "effort level `medium`" in prompt
 
 
 def test_build_prompt_forbids_substituting_a_different_repo_or_pr():

@@ -1,9 +1,10 @@
 # code-review-cli
 
-Headless code review for pull requests, powered entirely by Claude Code's own
-`/code-review` skill. This CLI does not review code itself — it validates
-input, builds a task prompt, and hands off to headless Claude Code, which
-checks out the PR itself (via `gh`/`git`/`aws`) and runs the review.
+Headless code review for pull requests, powered by dispatching the
+`voltagent-qa-sec:code-reviewer` subagent from within headless Claude Code.
+This CLI does not review code itself — it validates input, builds a task
+prompt, and hands off to headless Claude Code, which checks out the PR itself
+(via `gh`/`git`/`aws`) and dispatches that subagent to run the review.
 
 ## Requirements
 
@@ -12,9 +13,9 @@ checks out the PR itself (via `gh`/`git`/`aws`) and runs the review.
   this environment
 - `gh` authenticated (for `--provider github`) or AWS credentials/region
   configured (for `--provider codecommit`)
-- A `/code-review` skill available to Claude Code in the target environment
-  — this tool does not define or install that skill, it only invokes it by
-  name
+- The `voltagent-qa-sec:code-reviewer` subagent (from the `voltagent-subagents`
+  plugin) installed in the target environment — this tool does not define or
+  install that subagent, it only dispatches it by name
 
 `--provider` accepts exactly two values:
 
@@ -43,6 +44,6 @@ inspected for post-mortem debugging.
 ## Scope
 
 This CLI intentionally does not: trigger from CI, post PR comments, produce
-structured/JSON output, redact secrets/PII, or define the review skill's
-actual criteria (it invokes the pre-existing `/code-review` skill by name).
-These are deferred to future work.
+structured/JSON output, redact secrets/PII, or define the review's actual
+criteria (it dispatches the pre-existing `voltagent-qa-sec:code-reviewer`
+subagent by name). These are deferred to future work.

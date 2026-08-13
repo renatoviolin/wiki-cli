@@ -244,7 +244,9 @@ def test_run_review_does_not_raise_when_asyncio_run_raises(monkeypatch):
     assert "cannot be called from a running event loop" in result.error_message
 
 
-def test_run_review_wires_skills_output_format_and_max_turns(monkeypatch, tmp_path):
+def test_run_review_wires_setting_sources_output_format_and_max_turns(
+    monkeypatch, tmp_path
+):
     captured = {}
 
     async def _fake_query(prompt, options):
@@ -270,7 +272,8 @@ def test_run_review_wires_skills_output_format_and_max_turns(monkeypatch, tmp_pa
     runner_module.run_review("github", "org/repo", 29)
 
     options = captured["options"]
-    assert options.skills == ["code-review"]
+    assert options.setting_sources == ["user", "project"]
+    assert options.skills is None
     assert options.output_format == {
         "type": "json_schema",
         "schema": runner_module._RESULT_SCHEMA,

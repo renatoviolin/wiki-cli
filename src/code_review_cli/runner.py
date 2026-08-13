@@ -20,7 +20,7 @@ async def _run_review_async(provider: str, repo: str, pr: int) -> ReviewResult:
             cwd=str(workspace),
             permission_mode="bypassPermissions",
             max_turns=_MAX_TURNS,
-            skills=["code-review"],
+            setting_sources=["user", "project"],
             output_format={"type": "json_schema", "schema": _RESULT_SCHEMA},
         )
 

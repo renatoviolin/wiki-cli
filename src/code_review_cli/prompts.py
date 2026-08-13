@@ -14,12 +14,14 @@ container's filesystem, network, and installed CLI tools (git, gh, aws). Do the 
 following:
 
 1. Check out pull request #{pr} of the repository "{repo}" using the instructions below.
-2. Once checked out, run `/code-review` explicitly against the current diff, at \
-effort level `medium`. Do not omit the target or the effort level — this is a fresh \
-headless session with no prior invocation to inherit a default from.
+2. Once checked out, use the Agent tool to dispatch a subagent with `subagent_type` \
+set to `voltagent-qa-sec:code-reviewer`. Give it a clear task description instructing \
+it to review the code changes introduced by this pull request for code quality, \
+security vulnerabilities, correctness bugs, and best practices, and to report back its \
+complete findings. Wait for the subagent's full report before continuing.
 3. Reply with a JSON object matching this exact shape:
-   - On success: {{"success": true, "review": "<the complete code review produced by \
-that skill, verbatim>", "failure_reason": ""}}
+   - On success: {{"success": true, "review": "<the subagent's complete report, \
+verbatim>", "failure_reason": ""}}
    - On failure: {{"success": false, "review": "", "failure_reason": "<a short, \
 specific explanation of what went wrong>"}}
 
