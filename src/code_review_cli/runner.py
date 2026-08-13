@@ -44,7 +44,7 @@ def _log_verbose_message(message) -> None:
 
 
 async def _run_review_async(
-    provider: str, repo: str, pr: int, verbose: bool
+    provider: str, repo: str, pr: int, verbose: bool, model: str | None = None
 ) -> ReviewResult:
     try:
         workspace = Path(tempfile.mkdtemp(prefix="code-review-"))
@@ -55,6 +55,7 @@ async def _run_review_async(
             max_turns=_MAX_TURNS,
             setting_sources=["user", "project"],
             output_format={"type": "json_schema", "schema": _RESULT_SCHEMA},
+            model=model,
         )
 
         last_message = None
@@ -170,9 +171,13 @@ async def _run_review_async(
 
 
 def run_review(
-    provider: str, repo: str, pr: int, verbose: bool = False
+    provider: str,
+    repo: str,
+    pr: int,
+    verbose: bool = False,
+    model: str | None = None,
 ) -> ReviewResult:
     try:
-        return asyncio.run(_run_review_async(provider, repo, pr, verbose))
+        return asyncio.run(_run_review_async(provider, repo, pr, verbose, model))
     except Exception as exc:
         return ReviewResult(success=False, text="", error_message=str(exc))

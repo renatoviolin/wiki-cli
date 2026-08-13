@@ -3,7 +3,13 @@ import sys
 
 from .result import ReviewResult
 from .runner import run_review
-from .validation import ValidationError, validate_pr, validate_provider, validate_repo
+from .validation import (
+    ValidationError,
+    validate_model,
+    validate_pr,
+    validate_provider,
+    validate_repo,
+)
 
 
 def _print_metrics(result: ReviewResult) -> None:
@@ -35,6 +41,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr", required=True)
     parser.add_argument("--provider", required=True)
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--model", default=None)
     return parser
 
 
@@ -45,11 +52,14 @@ def main(argv: list[str] | None = None) -> int:
         provider = validate_provider(args.provider)
         pr = validate_pr(args.pr)
         repo = validate_repo(provider, args.repo)
+        model = validate_model(args.model)
     except ValidationError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    result: ReviewResult = run_review(provider, repo, pr, verbose=args.verbose)
+    result: ReviewResult = run_review(
+        provider, repo, pr, verbose=args.verbose, model=model
+    )
     _print_metrics(result)
 
     if result.success:

@@ -42,6 +42,14 @@ stdout, which always carries only the final review text on success.
 python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --verbose
 ```
 
+An optional `--model` flag selects the model Claude Code uses for the review,
+accepting the case-insensitive aliases `haiku`, `sonnet`, or `opus`. When
+omitted, Claude Code uses its own default model.
+
+```bash
+python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --model opus
+```
+
 On success, the review text is printed to stdout and the process exits 0.
 On failure (invalid input, or Claude Code failing to complete the review),
 an error is printed to stderr and the process exits non-zero (`2` for input

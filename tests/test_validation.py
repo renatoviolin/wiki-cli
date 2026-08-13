@@ -2,6 +2,7 @@ import pytest
 
 from code_review_cli.validation import (
     ValidationError,
+    validate_model,
     validate_pr,
     validate_provider,
     validate_repo,
@@ -81,3 +82,28 @@ def test_validate_repo_rejects_codecommit_leading_dash():
 def test_validate_repo_rejects_unrecognized_provider():
     with pytest.raises(ValidationError):
         validate_repo("bitbucket", "org/repo")
+
+
+def test_validate_model_accepts_haiku():
+    assert validate_model("haiku") == "claude-haiku-4-5"
+
+
+def test_validate_model_accepts_sonnet():
+    assert validate_model("sonnet") == "claude-sonnet-5"
+
+
+def test_validate_model_accepts_opus():
+    assert validate_model("opus") == "claude-opus-5"
+
+
+def test_validate_model_accepts_none():
+    assert validate_model(None) is None
+
+
+def test_validate_model_accepts_mixed_case():
+    assert validate_model("Opus") == "claude-opus-5"
+
+
+def test_validate_model_rejects_unknown_value():
+    with pytest.raises(ValidationError):
+        validate_model("gpt4")

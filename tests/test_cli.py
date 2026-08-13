@@ -9,7 +9,7 @@ def test_main_prints_review_text_and_returns_zero_on_success(monkeypatch, capsys
     monkeypatch.setattr(
         cli_module,
         "run_review",
-        lambda provider, repo, pr, verbose=False: ReviewResult(
+        lambda provider, repo, pr, verbose=False, model=None: ReviewResult(
             success=True, text="all good"
         ),
     )
@@ -28,7 +28,7 @@ def test_main_prints_error_and_returns_nonzero_on_review_failure(
     monkeypatch.setattr(
         cli_module,
         "run_review",
-        lambda provider, repo, pr, verbose=False: ReviewResult(
+        lambda provider, repo, pr, verbose=False, model=None: ReviewResult(
             success=False, text="", error_message="timed out"
         ),
     )
@@ -47,7 +47,7 @@ def test_main_prints_metrics_to_stderr_and_leaves_stdout_untouched(
     monkeypatch.setattr(
         cli_module,
         "run_review",
-        lambda provider, repo, pr, verbose=False: ReviewResult(
+        lambda provider, repo, pr, verbose=False, model=None: ReviewResult(
             success=True,
             text="all good",
             cost_usd=0.05,
@@ -77,7 +77,7 @@ def test_main_prints_metrics_to_stderr_and_leaves_stdout_untouched(
 def test_main_rejects_invalid_provider_without_invoking_claude(monkeypatch, capsys):
     called = False
 
-    def _fail_if_called(provider, repo, pr, verbose=False):
+    def _fail_if_called(provider, repo, pr, verbose=False, model=None):
         nonlocal called
         called = True
         return ReviewResult(success=True, text="should not happen")
@@ -96,7 +96,7 @@ def test_main_rejects_invalid_provider_without_invoking_claude(monkeypatch, caps
 def test_main_rejects_invalid_pr_without_invoking_claude(monkeypatch, capsys):
     called = False
 
-    def _fail_if_called(provider, repo, pr, verbose=False):
+    def _fail_if_called(provider, repo, pr, verbose=False, model=None):
         nonlocal called
         called = True
         return ReviewResult(success=True, text="should not happen")
@@ -115,7 +115,7 @@ def test_main_rejects_invalid_pr_without_invoking_claude(monkeypatch, capsys):
 def test_main_rejects_invalid_repo_without_invoking_claude(monkeypatch, capsys):
     called = False
 
-    def _fail_if_called(provider, repo, pr, verbose=False):
+    def _fail_if_called(provider, repo, pr, verbose=False, model=None):
         nonlocal called
         called = True
         return ReviewResult(success=True, text="should not happen")
@@ -164,7 +164,7 @@ def test_main_end_to_end_success_through_faked_sdk_query(monkeypatch, capsys, tm
 def test_main_threads_verbose_flag_through_to_run_review(monkeypatch, capsys):
     captured = {}
 
-    def _fake_run_review(provider, repo, pr, verbose=False):
+    def _fake_run_review(provider, repo, pr, verbose=False, model=None):
         captured["verbose"] = verbose
         return ReviewResult(success=True, text="all good")
 
@@ -181,7 +181,7 @@ def test_main_threads_verbose_flag_through_to_run_review(monkeypatch, capsys):
 def test_main_defaults_verbose_to_false_when_flag_is_not_given(monkeypatch, capsys):
     captured = {}
 
-    def _fake_run_review(provider, repo, pr, verbose=False):
+    def _fake_run_review(provider, repo, pr, verbose=False, model=None):
         captured["verbose"] = verbose
         return ReviewResult(success=True, text="all good")
 
@@ -193,3 +193,65 @@ def test_main_defaults_verbose_to_false_when_flag_is_not_given(monkeypatch, caps
 
     assert exit_code == 0
     assert captured["verbose"] is False
+
+
+def test_main_threads_resolved_model_through_to_run_review(monkeypatch, capsys):
+    captured = {}
+
+    def _fake_run_review(provider, repo, pr, verbose=False, model=None):
+        captured["model"] = model
+        return ReviewResult(success=True, text="all good")
+
+    monkeypatch.setattr(cli_module, "run_review", _fake_run_review)
+
+    exit_code = cli_module.main(
+        ["--repo", "org/repo", "--pr", "29", "--provider", "github", "--model", "opus"]
+    )
+
+    assert exit_code == 0
+    assert captured["model"] == "claude-opus-5"
+
+
+def test_main_defaults_model_to_none_when_flag_is_not_given(monkeypatch, capsys):
+    captured = {}
+
+    def _fake_run_review(provider, repo, pr, verbose=False, model=None):
+        captured["model"] = model
+        return ReviewResult(success=True, text="all good")
+
+    monkeypatch.setattr(cli_module, "run_review", _fake_run_review)
+
+    exit_code = cli_module.main(
+        ["--repo", "org/repo", "--pr", "29", "--provider", "github"]
+    )
+
+    assert exit_code == 0
+    assert captured["model"] is None
+
+
+def test_main_rejects_invalid_model_without_invoking_claude(monkeypatch, capsys):
+    called = False
+
+    def _fail_if_called(provider, repo, pr, verbose=False, model=None):
+        nonlocal called
+        called = True
+        return ReviewResult(success=True, text="should not happen")
+
+    monkeypatch.setattr(cli_module, "run_review", _fail_if_called)
+
+    exit_code = cli_module.main(
+        [
+            "--repo",
+            "org/repo",
+            "--pr",
+            "29",
+            "--provider",
+            "github",
+            "--model",
+            "gpt4",
+        ]
+    )
+
+    assert exit_code == 2
+    assert called is False
+    assert "model" in capsys.readouterr().err.lower()

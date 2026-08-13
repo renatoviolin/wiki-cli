@@ -12,6 +12,13 @@ _REPO_PATTERNS = {
 }
 
 
+_MODEL_ALIASES = {
+    "haiku": "claude-haiku-4-5",
+    "sonnet": "claude-sonnet-5",
+    "opus": "claude-opus-5",
+}
+
+
 class ValidationError(ValueError):
     """Raised when a CLI input fails validation before Claude Code is invoked."""
 
@@ -45,3 +52,14 @@ def validate_repo(provider: str, repo: str) -> str:
             f"--repo {repo!r} is not a valid {provider} repository identifier"
         )
     return repo
+
+
+def validate_model(model: str | None) -> str | None:
+    if model is None:
+        return None
+    resolved = _MODEL_ALIASES.get(model.lower())
+    if resolved is None:
+        raise ValidationError(
+            f"--model must be one of {sorted(_MODEL_ALIASES)}, got {model!r}"
+        )
+    return resolved
