@@ -2,6 +2,7 @@ import pytest
 
 from code_review_cli.validation import (
     ValidationError,
+    validate_level,
     validate_model,
     validate_pr,
     validate_provider,
@@ -107,3 +108,24 @@ def test_validate_model_accepts_mixed_case():
 def test_validate_model_rejects_unknown_value():
     with pytest.raises(ValidationError):
         validate_model("gpt4")
+
+
+def test_validate_level_accepts_light():
+    assert validate_level("light") == "light"
+
+
+def test_validate_level_accepts_standard():
+    assert validate_level("standard") == "standard"
+
+
+def test_validate_level_accepts_hard():
+    assert validate_level("hard") == "hard"
+
+
+def test_validate_level_defaults_to_standard_when_none():
+    assert validate_level(None) == "standard"
+
+
+def test_validate_level_rejects_unknown_value():
+    with pytest.raises(ValidationError):
+        validate_level("extreme")

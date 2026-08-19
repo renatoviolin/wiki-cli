@@ -18,6 +18,8 @@ _MODEL_ALIASES = {
     "opus": "claude-opus-5",
 }
 
+VALID_LEVELS = {"light", "standard", "hard"}
+
 
 class ValidationError(ValueError):
     """Raised when a CLI input fails validation before Claude Code is invoked."""
@@ -63,3 +65,13 @@ def validate_model(model: str | None) -> str | None:
             f"--model must be one of {sorted(_MODEL_ALIASES)}, got {model!r}"
         )
     return resolved
+
+
+def validate_level(level: str | None) -> str:
+    if level is None:
+        return "standard"
+    if level not in VALID_LEVELS:
+        raise ValidationError(
+            f"--level must be one of {sorted(VALID_LEVELS)}, got {level!r}"
+        )
+    return level
