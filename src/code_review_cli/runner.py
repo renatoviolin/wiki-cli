@@ -9,7 +9,7 @@ from claude_agent_sdk import ClaudeAgentOptions, query
 from .prompts import _RESULT_SCHEMA, build_prompt
 from .result import ReviewResult
 
-_MAX_TURNS = 60
+_MAX_TURNS = 150
 
 
 def _log_verbose_message(message) -> None:
@@ -44,11 +44,16 @@ def _log_verbose_message(message) -> None:
 
 
 async def _run_review_async(
-    provider: str, repo: str, pr: int, verbose: bool, model: str | None = None
+    provider: str,
+    repo: str,
+    pr: int,
+    verbose: bool,
+    model: str | None = None,
+    level: str = "standard",
 ) -> ReviewResult:
     try:
         workspace = Path(tempfile.mkdtemp(prefix="code-review-"))
-        prompt = build_prompt(provider, repo, pr)
+        prompt = build_prompt(provider, repo, pr, level)
         options = ClaudeAgentOptions(
             cwd=str(workspace),
             permission_mode="bypassPermissions",
@@ -176,8 +181,11 @@ def run_review(
     pr: int,
     verbose: bool = False,
     model: str | None = None,
+    level: str = "standard",
 ) -> ReviewResult:
     try:
-        return asyncio.run(_run_review_async(provider, repo, pr, verbose, model))
+        return asyncio.run(
+            _run_review_async(provider, repo, pr, verbose, model, level)
+        )
     except Exception as exc:
         return ReviewResult(success=False, text="", error_message=str(exc))

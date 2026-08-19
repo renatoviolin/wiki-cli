@@ -332,7 +332,7 @@ def test_run_review_wires_setting_sources_output_format_and_max_turns(
         "type": "json_schema",
         "schema": runner_module._RESULT_SCHEMA,
     }
-    assert options.max_turns == 60
+    assert options.max_turns == 150
     assert options.model is None
 
 
@@ -362,6 +362,98 @@ def test_run_review_threads_model_through_to_options(monkeypatch, tmp_path):
     runner_module.run_review("github", "org/repo", 29, model="claude-opus-5")
 
     assert captured["options"].model == "claude-opus-5"
+
+
+def test_run_review_threads_level_through_to_build_prompt(monkeypatch, tmp_path):
+    captured = {}
+
+    def _fake_build_prompt(provider, repo, pr, level):
+        captured["level"] = level
+        return "prompt text"
+
+    async def _fake_query(prompt, options):
+        yield types.SimpleNamespace(
+            is_error=False,
+            result="all good",
+            structured_output={
+                "success": True,
+                "review": "all good",
+                "failure_reason": "",
+            },
+            total_cost_usd=0.0,
+            duration_ms=100,
+            num_turns=1,
+        )
+
+    monkeypatch.setattr(runner_module, "build_prompt", _fake_build_prompt)
+    monkeypatch.setattr(runner_module, "query", _fake_query)
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    runner_module.run_review("github", "org/repo", 29, level="hard")
+
+    assert captured["level"] == "hard"
+
+
+def test_run_review_defaults_level_to_standard(monkeypatch, tmp_path):
+    captured = {}
+
+    def _fake_build_prompt(provider, repo, pr, level):
+        captured["level"] = level
+        return "prompt text"
+
+    async def _fake_query(prompt, options):
+        yield types.SimpleNamespace(
+            is_error=False,
+            result="all good",
+            structured_output={
+                "success": True,
+                "review": "all good",
+                "failure_reason": "",
+            },
+            total_cost_usd=0.0,
+            duration_ms=100,
+            num_turns=1,
+        )
+
+    monkeypatch.setattr(runner_module, "build_prompt", _fake_build_prompt)
+    monkeypatch.setattr(runner_module, "query", _fake_query)
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    runner_module.run_review("github", "org/repo", 29)
+
+    assert captured["level"] == "standard"
+
+
+def test_run_review_max_turns_raised_above_60(monkeypatch, tmp_path):
+    captured = {}
+
+    async def _fake_query(prompt, options):
+        captured["options"] = options
+        yield types.SimpleNamespace(
+            is_error=False,
+            result="all good",
+            structured_output={
+                "success": True,
+                "review": "all good",
+                "failure_reason": "",
+            },
+            total_cost_usd=0.0,
+            duration_ms=100,
+            num_turns=1,
+        )
+
+    monkeypatch.setattr(runner_module, "query", _fake_query)
+    monkeypatch.setattr(
+        runner_module.tempfile, "mkdtemp", lambda prefix: str(tmp_path)
+    )
+
+    runner_module.run_review("github", "org/repo", 29, level="hard")
+
+    assert captured["options"].max_turns == 150
 
 
 def _final_success_message():
