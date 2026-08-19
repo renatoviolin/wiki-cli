@@ -50,6 +50,19 @@ omitted, Claude Code uses its own default model.
 python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --model opus
 ```
 
+An optional `--level` flag controls review depth, accepting `light`,
+`standard`, or `hard`. `standard` is the default and reviews the PR with a
+single subagent. `light` narrows that same subagent's task to only
+high-confidence correctness and security findings, and — unless `--model` is
+also given explicitly — defaults the model to `haiku`. `hard` dispatches five
+specialized subagents (code review, security, performance, architecture, test
+coverage) and a final judge subagent that merges their findings and drops
+anything that doesn't survive an adversarial recheck.
+
+```bash
+python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --level hard
+```
+
 On success, the review text is printed to stdout and the process exits 0.
 On failure (invalid input, or Claude Code failing to complete the review),
 an error is printed to stderr and the process exits non-zero (`2` for input

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `code-review-cli` is a thin CLI that triggers a **headless** Claude Code review of a pull request. It does not review code itself: it validates input, builds a prompt, and hands off to a headless Claude Code session (via the Claude Agent SDK) which checks out the PR itself and dispatches the `voltagent-qa-sec:code-reviewer` subagent to do the actual review.
 
 ```bash
-python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit [--model haiku|sonnet|opus] [--verbose]
+python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit [--model haiku|sonnet|opus] [--level light|standard|hard] [--verbose]
 ```
 
 ## Commands
@@ -25,7 +25,7 @@ There is no linter or formatter configured in `pyproject.toml` — don't add `ru
 
 Five single-responsibility modules under `src/code_review_cli/` (src-layout package), wired together by `cli.py`:
 
-- **`validation.py`** — validates `--repo`/`--pr`/`--provider`/`--model` and raises `ValidationError`. All four inputs are validated **before** Claude Code is ever invoked; `cli.py` must never call `run_review` on invalid input (exit code 2).
+- **`validation.py`** — validates `--repo`/`--pr`/`--provider`/`--model`/`--level` and raises `ValidationError`. All five inputs are validated **before** Claude Code is ever invoked; `cli.py` must never call `run_review` on invalid input (exit code 2).
 - **`prompts.py`** — pure string templating, no imports from the rest of the package. `build_prompt()` renders the task Claude receives: check out the PR (provider-specific `gh`/`aws` instructions), dispatch `voltagent-qa-sec:code-reviewer` via the Agent tool, then reply with JSON matching `_RESULT_SCHEMA` (`{success, review, failure_reason}`). Also carries an explicit instruction *not* to substitute a different repo/PR if the named one can't be resolved — fail closed instead.
 - **`result.py`** — `ReviewResult` dataclass: `success`, `text`, `error_message`, plus run metrics (`cost_usd`, `duration_ms`, `num_turns`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`). `exit_code()` maps `success` to 0/1.
 - **`runner.py`** — the only module that touches the Claude Agent SDK. Creates a fresh temp workspace per run (`code-review-*`), invokes `query()` with `output_format` forcing the JSON schema above, and parses the streamed messages into a `ReviewResult`. Deletes the workspace on success; leaves it in place on failure for post-mortem debugging.

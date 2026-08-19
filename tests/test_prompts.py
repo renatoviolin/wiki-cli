@@ -33,12 +33,13 @@ def test_build_prompt_forbids_substituting_a_different_repo_or_pr():
     assert "do not search for or substitute" in prompt.lower()
 
 
-def test_build_prompt_standard_matches_default_output():
-    default_prompt = build_prompt("github", "renatoviolin/purabackend", 29)
-    explicit_prompt = build_prompt(
-        "github", "renatoviolin/purabackend", 29, level="standard"
+def test_build_prompt_standard_matches_pre_feature_golden_output():
+    expected = 'You are running headless, with full read/write access to this container\'s filesystem, network, and installed CLI tools (git, gh, aws). Do the following:\n\n1. Check out pull request #29 of the repository "renatoviolin/purabackend" using the instructions below.\n2. Once checked out, use the Agent tool to dispatch a subagent with `subagent_type` set to `voltagent-qa-sec:code-reviewer`. Give it a clear task description instructing it to review the code changes introduced by this pull request for code quality, security vulnerabilities, correctness bugs, and best practices, and to report back its complete findings. Wait for the subagent\'s full report before continuing.\n3. Reply with a JSON object matching this exact shape:\n   - On success: {"success": true, "review": "<the subagent\'s complete report, verbatim>", "failure_reason": ""}\n   - On failure: {"success": false, "review": "", "failure_reason": "<a short, specific explanation of what went wrong>"}\n\nIf the named repository or pull request cannot be resolved exactly as given — it does not exist, the name is wrong, the PR number is wrong, or checkout fails for any reason — do not search for or substitute a different repository or pull request. Stop immediately and reply with the failure JSON shape above.\n\nThis PR is hosted on GitHub. To check it out:\n1. Clone the repository: `gh repo clone renatoviolin/purabackend ./workspace`\n2. Run all subsequent commands with the working directory set to `./workspace`.\n3. Check out the pull request: `gh pr checkout 29` (run inside `./workspace`)\n\n'
+    assert build_prompt("github", "renatoviolin/purabackend", 29) == expected
+    assert (
+        build_prompt("github", "renatoviolin/purabackend", 29, level="standard")
+        == expected
     )
-    assert default_prompt == explicit_prompt
 
 
 def test_build_prompt_light_narrows_scope_to_single_agent():
@@ -57,3 +58,4 @@ def test_build_prompt_hard_dispatches_all_five_agents_and_a_judge():
     assert "voltagent-qa-sec:qa-expert" in prompt
     assert "adversarially question" in prompt.lower()
     assert "judge" in prompt.lower()
+    assert "the judge subagent's final merged and verified report" in prompt

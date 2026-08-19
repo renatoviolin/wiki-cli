@@ -366,7 +366,7 @@ def test_main_does_not_override_explicit_model_for_light_level(monkeypatch, caps
     assert captured["model"] == "claude-opus-5"
 
 
-def test_main_does_not_default_model_to_haiku_for_standard_level(monkeypatch, capsys):
+def test_main_does_not_default_model_to_haiku_for_hard_level(monkeypatch, capsys):
     captured = {}
 
     def _fake_run_review(provider, repo, pr, verbose=False, model=None, level="standard"):
@@ -376,7 +376,7 @@ def test_main_does_not_default_model_to_haiku_for_standard_level(monkeypatch, ca
     monkeypatch.setattr(cli_module, "run_review", _fake_run_review)
 
     exit_code = cli_module.main(
-        ["--repo", "org/repo", "--pr", "29", "--provider", "github"]
+        ["--repo", "org/repo", "--pr", "29", "--provider", "github", "--level", "hard"]
     )
 
     assert exit_code == 0
