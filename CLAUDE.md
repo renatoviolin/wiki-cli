@@ -10,6 +10,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit [--model haiku|sonnet|opus] [--level light|standard|hard] [--verbose]
 ```
 
+A second, independent CLI (`wiki_cli`) generates and maintains a `.wiki/` knowledge base for **the repository you are currently in**, which the review flow then reads to make better-informed reviews. It takes no repo/provider arguments — it operates on the current checkout, writes files, and stops without committing; the developer commits `.wiki/` alongside their own work.
+
+```bash
+python -m wiki_cli.cli create|update [--model haiku|sonnet|opus] [--verbose]
+```
+
 ## Commands
 
 ```bash
@@ -17,11 +23,23 @@ pip install -e .                      # install (editable), from repo root
 pytest tests/ -v                      # run the full suite
 pytest tests/test_runner.py -v        # run one test file
 pytest tests/test_runner.py::test_run_review_returns_success_result -v   # run a single test
+pytest tests/test_wiki_runner.py -v   # wiki_cli's tests are prefixed test_wiki_*
 ```
 
 There is no linter or formatter configured in `pyproject.toml` — don't add `ruff`/`black`/etc. config unless asked.
 
 ## Architecture
+
+Two independent packages under `src/`, sharing only this repository — **zero imports between them**. `code_review_cli` reviews a pull request; `wiki_cli` maintains the `.wiki/` knowledge base for the current checkout. The only coupling is a convention: the review prompt reads `.wiki/` if it happens to exist.
+
+### `wiki_cli` — four modules
+
+- **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. Carries two rules learned the hard way (see "Why the wiki prompt is written the way it is" below): cite `file:line`, and never state a symbol name that hasn't been read from source.
+- **`result.py`** — `WikiResult`, mirroring `ReviewResult` plus `pages_written`.
+- **`runner.py`** — the one `query()` call. Unlike `code_review_cli.runner` it uses `cwd=os.getcwd()` with **no temp workspace and no cleanup**, because it deliberately writes into the developer's real checkout.
+- **`cli.py`** — argparse with a single positional `create|update`. No `validation.py`: argparse `choices` covers the only argument, and the small model-alias map lives inline.
+
+### `code_review_cli` — five modules
 
 Five single-responsibility modules under `src/code_review_cli/` (src-layout package), wired together by `cli.py`:
 
@@ -38,6 +56,14 @@ Five single-responsibility modules under `src/code_review_cli/` (src-layout pack
 - **`ClaudeAgentOptions(setting_sources=["user", "project"], ...)` is deliberate, not incidental.** Dispatching `voltagent-qa-sec:code-reviewer` requires the SDK to discover that plugin-provided subagent, which needs `"user"`/`"project"` settings scope. Explicitly excluding `"local"` scope isolates the run from the operator's personal permission/hook config. Do not set `setting_sources=[]` — that breaks subagent discovery entirely (confirmed against the SDK's own source, which auto-defaults this only when `skills=[...]` is set and nothing else).
 - **`runner.py` duck-types SDK messages via `hasattr()` rather than importing SDK message classes** (`ResultMessage`, `AssistantMessage`, etc.), so an SDK version bump only requires changes in this one file. Tests follow the same convention: fakes are `types.SimpleNamespace` objects shaped like the real dataclasses, not imports of the real SDK classes.
 - **Token/cost metrics require summing across `ResultMessage.model_usage`** (a `dict[str, ModelUsage]` keyed by model name — a run can span more than one model, e.g. the orchestrator plus the dispatched subagent). Both `inputTokens`/`outputTokens` *and* `cacheReadInputTokens`/`cacheCreationInputTokens` must be summed — omitting the cache fields produces a cost/token mismatch in the metrics line (a real bug caught from a production run: cost didn't reconcile with reported tokens because cache reads/writes, which dominate cost in multi-turn sessions, weren't counted).
+
+### Why the wiki prompt is written the way it is
+
+`wiki_cli/prompts.py` carries two instructions that look like fussy prose but are load-bearing, and both came from measurement rather than taste. We ran OpenWiki (LangChain's productized version of the same idea) against a real 63.7k-LOC Go repository and checked its output against the source. Architecture and behaviour were substantially accurate — 12 of 14 named symbols correct, the Postgres error-code claim correct and in the cited file. But roughly half the sampled *identifier* detail was invented: a type named `EvidenceFile` that didn't exist (the real one was `Evidence`), a field `sha256_hash` (real: `ContentHash`), a field `mime_type` absent from the repo entirely — all stated in exactly the same confident tone as the correct content. Full evidence in `docs/second-brain-alternatives-review.md`.
+
+Hence: **cite `file:line`** so any claim is checkable, and **never name a symbol you haven't read** — describe behaviour instead. And hence the review prompt's rule that the code outranks the wiki, with instructions to report contradictions in the review, which is what makes the wiki self-correcting over time.
+
+`docs/superpowers/specs/` contains three superseded designs (`2026-08-13-second-brain-design.md`, `2026-08-19-second-brain-v2-design.md`, `2026-08-25-pr-memory-design.md`) that proposed far more elaborate versions of this — typed relation graphs, provenance ontologies, quote-verification gates, executable convention matchers. They were all cut in favour of the simple thing that exists now. They are kept as history; don't resurrect them without reading why they were dropped.
 
 ### Design history
 

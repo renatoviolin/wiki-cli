@@ -20,6 +20,17 @@ following:
    - On failure: {{"success": false, "review": "", "failure_reason": "<a short, \
 specific explanation of what went wrong>"}}
 
+Before dispatching in step 2, check whether a `.wiki/` directory exists at the root of \
+the checked-out repository. If it does, read `.wiki/index.md` and whichever pages it \
+links to are relevant to the files this pull request changes, and include what you learn \
+in the task description you give the subagent(s). That directory is the repository's own \
+knowledge base: it describes architecture, conventions, and history that the diff alone \
+does not show, and it is there to make the review better informed. If `.wiki/` does not \
+exist, carry on without it.
+
+The code is the source of truth, not the wiki. Where the wiki contradicts the code, \
+trust the code, and note the discrepancy in the review so the wiki can be corrected.
+
 If the named repository or pull request cannot be resolved exactly as given — it \
 does not exist, the name is wrong, the PR number is wrong, or checkout fails for any \
 reason — do not search for or substitute a different repository or pull request. Stop \
