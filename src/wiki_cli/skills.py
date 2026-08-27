@@ -1,10 +1,14 @@
 import os
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
 _BUNDLED_ROOT = "bundled_skills"
 _DEFAULT_SKILL = "wiki-remember"
+_DEFAULT_REPO = "renatoviolin/wiki-cli"
+_DEFAULT_REF = "main"
 
 
 @dataclass
@@ -82,5 +86,36 @@ def install_skill(skill: str | None = None, target_dir: str | None = None, sourc
     return InstallResult(success=True, message=f"installed {', '.join(skills_to_install)} to {root / '.claude' / 'skills'}", dest=last_dest)
 
 
+def _github_raw_url(repo: str, ref: str, skill: str) -> str:
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/.claude/skills/{skill}/SKILL.md"
+
+
+def _fetch_github(repo: str, ref: str, skill: str) -> bytes:
+    url = _github_raw_url(repo, ref, skill)
+    with urllib.request.urlopen(url, timeout=5) as resp:
+        return resp.read()
+
+
 def _install_from_github(skill, target_dir, ref, repo, force, dry_run, all_skills):
-    return InstallResult(success=False, error="github source not yet implemented")
+    repo = repo or _DEFAULT_REPO
+    ref = ref or _DEFAULT_REF
+    if all_skills:
+        return InstallResult(success=False, error="--all not supported with --from github (specify a skill)")
+    name = skill or _DEFAULT_SKILL
+    try:
+        data = _fetch_github(repo, ref, name)
+    except urllib.error.HTTPError as exc:
+        return InstallResult(success=False, error=f"failed to fetch {name} from github ({exc.code} {exc.reason}) — {_github_raw_url(repo, ref, name)}")
+    except Exception as exc:
+        return InstallResult(success=False, error=f"failed to fetch {name} from github: {exc}")
+    root = _target_root(target_dir)
+    dest = root / ".claude" / "skills" / name / "SKILL.md"
+    if dest.exists() and not force and not dry_run:
+        if dest.read_bytes() == data:
+            return InstallResult(success=True, message=f"{dest} already up to date", skipped=True, dest=str(dest))
+        return InstallResult(success=False, error=f"{dest} already exists (use --force to overwrite)", skipped=True, dest=str(dest))
+    if dry_run:
+        return InstallResult(success=True, message=f"would install {name} from github {repo}@{ref} to {dest}", dest=str(dest))
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return InstallResult(success=True, message=f"installed {name} from github {repo}@{ref} to {dest}", dest=str(dest))
