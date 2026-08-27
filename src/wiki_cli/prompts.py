@@ -131,12 +131,14 @@ usually the hardest thing for a newcomer to recover from source alone.
 name, so a future reader can find the right suite without reading a whole file.
 - Make change navigation explicit: where to start, what to watch out for, and what to run \
 to check the change.
-- Ground each substantive page in **at least five distinct source files**, and list them in \
-a short `## Sources` section at the end of the page so a reader can jump straight to the \
-evidence. If you cannot reach five, treat that as a signal rather than a formatting \
-problem: either the research is not finished, or the subject is too small to justify its \
-own page and belongs merged into a neighbouring one. A genuinely small but independent \
-component may cite fewer — say in one line why it stands alone.
+- Ground each substantive page in **at least five distinct source files**, and end the \
+page with a `## Sources` section listing them so a reader can jump straight to the \
+evidence. This is a **structural requirement** for every substantive page, not optional \
+formatting — this package's own `wiki lint` command checks for it, and `## Before you \
+finish` below has you run that check. If you cannot reach five, treat that as a signal \
+rather than a formatting problem: either the research is not finished, or the subject is \
+too small to justify its own page and belongs merged into a neighbouring one. A genuinely \
+small but independent component may cite fewer — say in one line why it stands alone.
 """
 
 _STRUCTURE_RULES = """## Structure and decomposition
@@ -195,10 +197,16 @@ _FINISHING_CHECKS = """## Before you finish
 should have real coverage or an explicit, accurate reason for its absence. Record genuine \
 deferrals in a short `## Backlog` section in `.wiki/index.md`, each with a source anchor \
 and a one-line reason.
-2. Re-check a sample of the most specific claims you made — exact type, field, route, and \
+2. Run this package's own mechanical checker: `python -m wiki_cli.cli lint` (or `wiki \
+lint` if the console script is installed) from the repository root. Fix every reported \
+error — most commonly a missing `## Sources` section or a citation whose file or symbol no \
+longer matches. Skim advisory-level findings for genuine staleness, but they don't block. \
+If the command isn't available in this environment, at minimum confirm by hand that every \
+substantive page you wrote or touched ends with a `## Sources` section.
+3. Re-check a sample of the most specific claims you made — exact type, field, route, and \
 command names — against the source one more time. Correct anything you cannot confirm, or \
 soften it to a behavioural description.
-3. Test the wiki the way a reader will actually use it, in two steps and in this order.
+4. Test the wiki the way a reader will actually use it, in two steps and in this order.
    First, from the **source** you read, write down three realistic engineering tasks for \
 this specific repository — a bug you would have to trace across a boundary, a feature you \
 would have to extend, a behaviour you would have to verify before shipping — and for each, \
@@ -208,7 +216,7 @@ Anywhere the pages cannot answer a question you derived from real code, that is 
 gap: fix the pages. Deriving the questions from source before consulting the wiki matters, \
 because questions written while looking at the wiki will only ever ask what it already \
 answers.
-4. Remove low-value stubs and redundant pages you created along the way.
+5. Remove low-value stubs and redundant pages you created along the way.
 
 """
 

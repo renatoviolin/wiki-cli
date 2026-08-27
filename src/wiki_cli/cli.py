@@ -1,6 +1,8 @@
 import argparse
+import os
 import sys
 
+from .lint import LintFinding, lint_wiki
 from .result import WikiResult
 from .runner import run_wiki
 
@@ -37,14 +39,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "Generate or update the .wiki knowledge base for the current repository."
         ),
     )
-    parser.add_argument("mode", choices=["create", "update"])
+    parser.add_argument("mode", choices=["create", "update", "lint"])
     parser.add_argument("--model", default=None)
     parser.add_argument("--verbose", action="store_true")
     return parser
 
 
+def _print_lint_report(findings: list[LintFinding]) -> int:
+    for finding in findings:
+        print(f"{finding.severity}: {finding.file}:{finding.line}: {finding.message}")
+
+    errors = [f for f in findings if f.severity == "error"]
+    advisories = [f for f in findings if f.severity == "advisory"]
+    print(f"{len(errors)} error(s), {len(advisories)} advisory(ies)")
+
+    return 1 if errors else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
+
+    if args.mode == "lint":
+        return _print_lint_report(lint_wiki(os.getcwd()))
 
     model = None
     if args.model is not None:

@@ -12,7 +12,9 @@ This repository holds two independent Python CLIs, packaged together under `src/
 - **[wiki-cli](wiki-cli.md)** — installed as the `wiki` console script, and the tool
   that generated this knowledge base. Takes no repo/provider arguments; it operates on the
   current checkout, writing `.wiki/` pages under an evidence-discipline prompt, and stops
-  without committing.
+  without committing. It also adds a short, idempotent pointer to `.wiki/` inside this
+  repository's `CLAUDE.md` or `AGENTS.md` (skipped here since this file already references
+  `.wiki/` — see `wiki-cli.md`'s `_WIKI_POINTER`).
 
 The only coupling between them is a convention, not code: `code-review-cli.md`'s prompt
 instructs the review session to read `.wiki/` (this directory) for context if it exists in
@@ -30,6 +32,20 @@ named `test_*.py` and `wiki_cli` tests prefixed `test_wiki_*.py`.
 No linter or formatter is configured in `pyproject.toml`, and the repository convention is
 zero code comments anywhere — both stated in the top-level `CLAUDE.md`.
 
+## Releasing
+
+Both CLIs ship from one `pyproject.toml` (`version`, currently `0.1.0`, and the
+`code-review`/`wiki` entries under `[project.scripts]`) and one `CHANGELOG.md` at the repo
+root — versioning is manual, with no CI or automation cutting a release. `README.md`'s
+`pip install git+https://github.com/renatoviolin/wiki-cli.git` command deliberately has no
+`@tag`, so every install picks up whatever is on `main`; git tags exist only as release
+history, not as something an install command can pin to. The top-level `CLAUDE.md`'s
+"Releasing" section is the authoritative procedure (bump `version`, add a `CHANGELOG.md`
+entry, commit both, tag `vX.Y.Z`, push with `--tags`) for commits meant to change what a
+fresh install gives a user — not every commit qualifies. Nothing in the repository enforces
+this procedure mechanically; there is no test or hook that checks `pyproject.toml`'s
+`version` against `CHANGELOG.md` or against a git tag.
+
 ## Task-routing table
 
 | I want to change... | Page | Source entrypoints | Key symbols | Tests | Validate with |
@@ -43,6 +59,9 @@ zero code comments anywhere — both stated in the top-level `CLAUDE.md`.
 | CLI flags or stdout/stderr contract for either tool | [code-review-cli](code-review-cli.md) / [wiki-cli](wiki-cli.md) | `src/code_review_cli/cli.py` / `src/wiki_cli/cli.py` | `main`, `_print_metrics` | `tests/test_cli.py` / `tests/test_wiki_cli.py` | `pytest tests/test_cli.py -v` / `pytest tests/test_wiki_cli.py -v` |
 | The result/exit-code shape either tool returns | [code-review-cli](code-review-cli.md) | `src/code_review_cli/result.py`, `src/wiki_cli/result.py` | `ReviewResult`, `WikiResult`, `exit_code` | `tests/test_result.py` | `pytest tests/test_result.py -v` |
 | Whether a design idea in `docs/` is current or superseded | [design-history](design-history.md) | `docs/superpowers/plans/`, `docs/superpowers/specs/` | — | — | — |
+| The `CLAUDE.md`/`AGENTS.md` wiki pointer, or what counts as the one exception to "write only under `.wiki/`" | [wiki-cli](wiki-cli.md) | `src/wiki_cli/prompts.py` | `_WIKI_POINTER` | `tests/test_wiki_prompts.py` (`test_build_prompt_points_claude_or_agents_md_at_wiki` and siblings) | `pytest tests/test_wiki_prompts.py -v` |
+| Cutting a new release (version bump, `CHANGELOG.md`, tag) | [index](index.md) ("Releasing", above) | `pyproject.toml`, `CHANGELOG.md`, top-level `CLAUDE.md` | — | — | — |
+| The mechanical checks `wiki_cli`'s own `lint` mode runs over `.wiki/` pages (missing `## Sources`, broken citations, stale symbol references) | [wiki-cli](wiki-cli.md) | `src/wiki_cli/lint.py`, `src/wiki_cli/cli.py` | `lint_wiki`, `LintFinding`, `_print_lint_report` | `tests/test_wiki_lint.py` | `pytest tests/test_wiki_lint.py -v` (or `python -m wiki_cli.cli lint`) |
 
 ## Backlog
 
@@ -54,9 +73,6 @@ Deliberate deferrals found during this pass, not gaps in coverage:
 - **`docs/superpowers/specs/*.md`** (three second-brain/PR-memory designs) are
   intentionally undocumented as *current* behavior here, since none of them were built —
   see `design-history.md` for what shipped instead.
-- **`second-brain-for-business.md`** is a stakeholder-facing summary of an unshipped,
-  more elaborate design than what actually exists (`wiki-cli.md`); flagged as stale in
-  `design-history.md` rather than treated as a description of current capability.
 
 ## Decisions & rationale
 

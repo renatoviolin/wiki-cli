@@ -149,3 +149,98 @@ per page written, and the process exits `0`. On failure, an error prints to
 stderr and the process exits `1` (the wiki-generation run failed) or `2`
 (invalid `mode` or `--model` value — rejected before Claude Code is ever
 invoked).
+
+### Wiki linting
+
+```bash
+wiki lint
+```
+
+`lint` is a third mode, and unlike `create`/`update` it never invokes
+Claude Code — it's a pure, instant, zero-cost mechanical check over the
+`.wiki/` pages already on disk. `create` and `update` already run it
+themselves as one of their own finishing checks and fix whatever it
+reports before finishing; run it directly to check `.wiki/` as it
+currently stands, without triggering a new generation session — e.g. in a
+pre-commit hook or CI.
+
+It checks three things:
+
+- **`## Sources` section** (error) — every substantive page must end with
+  one, and every path it lists must exist on disk.
+- **Pytest-style citations** (error) — any `` `path.py::symbol` `` citation
+  must point at a real file that actually defines that `def`/`class`.
+- **Header-attributed symbols** (advisory only) — under a `## Section —
+  \`file.py\`` heading, a bare backtick-quoted symbol not found in that
+  file is flagged as a possible stale reference. This is advisory, not an
+  error, because the heuristic can't distinguish a genuinely stale
+  citation from a legitimate cross-file mention inside the same section —
+  it never fails the run.
+
+`--model`/`--verbose` are parsed but have no effect on this mode. Each
+finding prints as one `severity: file:line: message` line, followed by a
+`N error(s), M advisory(ies)` summary. The process exits `1` if any
+`error`-severity finding was reported, `0` otherwise — advisory findings
+never affect the exit code.
+
+## What gets captured: `wiki_cli` vs `wiki-remember`
+
+`.wiki/` has a second, independent writer besides this CLI: `wiki-remember`,
+an interactive Claude Code Skill (`.claude/skills/wiki-remember/SKILL.md`)
+that captures a decision or rationale from the *current conversation* on
+explicit request (e.g. "remember this in the wiki") — it never runs
+proactively, and it's not a `wiki_cli` mode. Both write under `.wiki/`, but
+they capture fundamentally different kinds of knowledge, verified
+differently:
+
+| | `wiki_cli` (`create`/`update`) | `wiki-remember` (interactive Skill) |
+|---|---|---|
+| **Captures** | WHAT the code is — architecture, module responsibilities, data flow, invariants, entrypoints, test coverage | WHY — decisions, rejected alternatives, and rationale actually discussed in a conversation |
+| **Source of truth** | Source code and tests, read directly by the headless session | The conversation itself — never independently re-derives how code behaves |
+| **Trigger** | Explicit CLI command (`wiki create`/`update`), run whenever a developer chooses | Explicit user ask mid-conversation — never invoked on its own initiative |
+| **Where it writes** | `.wiki/*.md` structural pages (one per component/system) plus `index.md`'s task-routing table | One dated file per decision under `.wiki/decisions/<category>/`, plus one row in `index.md`'s "Decisions & rationale" table |
+| **Verification** | Evidence discipline (must read the entrypoint, implementation, callers, and tests before writing) plus a mechanical `wiki lint` pass (checks every page ends with a real `## Sources` section and every code citation resolves) — both enforced before the session can finish | A quick sanity check against an obviously-relevant existing page, plus a mechanical grep confirming any cited symbol exists — no full evidence-discipline pass, and it must not independently assert how code behaves |
+| **Regenerates/rewrites** | Yes — `update` re-derives affected pages from current source every run; `create` fully regenerates | No — append-only. A changed decision gets a new dated file; the old one's `status` flips to `superseded`, never edited or deleted |
+| **Example finding** | "`is_error=False` does not mean the review succeeded. A session can complete normally while the underlying task failed (bad checkout, unresolvable repo). Real success/failure comes from `structured_output.success` — checked as a second, independent gate after `is_error` — not from `is_error` alone." (`.wiki/code-review-cli.md`, verified against `runner.py`'s `_run_review_async`) | "The flat log was rejected because it doesn't scale well once many decisions accumulate. Grouping by existing structural topic pages was rejected because a conversation-derived decision doesn't always map cleanly onto one existing structural page." (`.wiki/decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md` — itself later superseded, `status` flipped in place) |
+
+In short: `wiki_cli` answers "what does this code do and how is it put
+together," continuously re-verified against source; `wiki-remember` answers
+"why did we decide this," a durable record of intent that source code alone
+can't reconstruct.
+
+### Prior art that shaped this design
+
+- **OpenWiki** (LangChain) — the "LLM Wiki" pattern productized: a CLI that
+  writes a wiki directory, updates `AGENTS.md`/`CLAUDE.md`, and re-runs
+  incrementally against git diffs. Running OpenWiki 0.3.3 against a real
+  63.7k-LOC Go repository found architecture/behavior claims substantially
+  accurate, but roughly half the sampled *identifier*-level detail invented
+  — the direct source of `wiki_cli`'s evidence-discipline rule against
+  naming any symbol not read verbatim in source, and of citing evidence as
+  path-plus-symbol rather than `file:line`.
+- **AGENTS.md** — an open convention (60k+ repos, 25+ tools, Linux
+  Foundation stewardship) for giving coding agents repo-specific
+  instructions. Inspired `_WIKI_POINTER`: writing `.wiki/`'s existence into
+  `CLAUDE.md`/`AGENTS.md` so a general-purpose agent session, not just this
+  CLI's own review flow, knows to consult it.
+- **ADRs** (Nygard / MADR format) — lightweight, git-tracked
+  Architecture Decision Records, in ThoughtWorks' *Adopt* ring since 2018.
+  Inspired `wiki-remember`'s decision frontmatter (`status`, `supersedes`,
+  `captured`) over a bespoke schema.
+- **"Keyword search is all you need"** (AAAI 2026, arXiv:2602.23368) — found
+  agentic keyword search reaches >90% of RAG performance with no vector
+  database, corroborating the choice to skip embeddings/vector search
+  entirely in favor of plain grep/read tools.
+- **An arXiv preprint on "context rot"** (2606.09090) — found that stale
+  AI-configuration artifacts can *degrade* agent performance versus having
+  no file at all, because agents tend to follow them literally rather than
+  reading skeptically. Part of why this design stayed deliberately simple —
+  plain Markdown, human-reviewed before commit — instead of adding
+  confidence-tag metadata that would look authoritative even when stale.
+- **Rationale-mining literature** (DRMiner, ArchISMiner —
+  arXiv:2510.21966, arXiv:2405.19623) — validates mining decision rationale
+  from development history as a real, under-served niche, corroborating
+  `wiki-remember`'s focus on the `decisions/` layer specifically.
+
+Full research trail: `docs/second-brain-alternatives-review.md` and
+`.wiki/design-history.md`.

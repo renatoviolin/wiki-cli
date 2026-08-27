@@ -180,6 +180,19 @@ def test_build_prompt_sets_a_citation_floor_with_a_sources_section(mode):
     assert "## Sources" in prompt
 
 
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_treats_sources_as_a_structural_requirement(mode):
+    prompt = build_prompt(mode)
+    assert "structural requirement" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_finishing_checks_run_wiki_lint(mode):
+    prompt = build_prompt(mode)
+    assert "wiki_cli.cli lint" in prompt
+    assert "Fix every reported error" in prompt
+
+
 def test_build_prompt_create_writes_pages_in_dependency_order():
     prompt = build_prompt("create")
     assert "in dependency order" in prompt

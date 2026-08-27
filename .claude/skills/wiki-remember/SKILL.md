@@ -31,6 +31,13 @@ explicitly said in this conversation.
    path plus symbol name (e.g. `src/wiki_cli/prompts.py` (`build_prompt`)) — never
    `file:line`, since line numbers go stale and a stale reference is itself a false claim.
 
+   Before writing, for each such code citation, run `grep -n '<symbol>' <path>` (repo-root
+   relative) to confirm the symbol actually appears in that file. Not found → fix the
+   citation or drop it and describe the behavior in prose instead. This is a cheap
+   mechanical check, not a substitute for `wiki_cli`'s full evidence discipline (reading
+   the entrypoint, implementation, callers, and tests) — it only catches a citation whose
+   symbol string is already wrong or has gone stale.
+
    Before writing, do one quick sanity check: if a structural page already exists under
    `.wiki/` that's obviously relevant to this topic, skim it for anything that plainly
    contradicts what you're about to capture. This is not a verification pass — one read if

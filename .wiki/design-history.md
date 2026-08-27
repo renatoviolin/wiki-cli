@@ -48,12 +48,12 @@ simpler design than any of the three: no typed relations, no confidence tags, no
 top-level `CLAUDE.md` is explicit that they should not be resurrected without first
 reading why they were dropped.
 
-`second-brain-for-business.md` (repo root) is a plain-language summary of the second/v2
-design aimed at non-technical stakeholders. Its own "Status" section already flags it as
-"an approved design, not a shipped feature" — and since `wiki-cli.md` shipped a simpler
-mechanism than the one it describes (no confidence tags, no automatic contradiction
-detection, no `ingest` step), that document is now doubly stale: worth flagging to
-whoever maintains stakeholder-facing docs rather than treating as current.
+`second-brain-for-business.md` — formerly at the repo root, a plain-language summary of the
+second/v2 design aimed at non-technical stakeholders — was itself deleted as stale (commit
+`02e3cec chore: ignore ruff/superpowers caches and xml reports, drop stale
+second-brain-for-business.md`, whose message notes the doc summarized an unshipped design
+superseded by `wiki-cli.md`). It no longer exists in the repository; this entry is kept
+only so a reader who finds a stray reference to it elsewhere knows why it's gone.
 
 ## The evidence review that shaped what actually shipped
 
@@ -76,3 +76,12 @@ directly visible in `wiki-cli.md`'s shipped prompt:
 This document itself carries a confidentiality note: it contains architecture decisions
 for internal systems and should stay local, not be published externally — consistent with
 this repository's status as C&A internal engineering material.
+
+## Sources
+
+- `docs/superpowers/plans/2026-08-13-code-review-cli.md`
+- `docs/superpowers/plans/2026-08-19-review-levels.md`
+- `docs/superpowers/specs/2026-08-13-second-brain-design.md`
+- `docs/superpowers/specs/2026-08-19-second-brain-v2-design.md`
+- `docs/superpowers/specs/2026-08-25-pr-memory-design.md`
+- `docs/second-brain-alternatives-review.md`

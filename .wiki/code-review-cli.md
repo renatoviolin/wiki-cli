@@ -172,3 +172,14 @@ metrics threaded through from `runner.py` (`cost_usd`, `duration_ms`, `num_turns
 
 Full suite: `pytest tests/ -v` (excludes nothing package-specific — `wiki-cli.md` shares
 the same `tests/` directory, prefixed `test_wiki_*`).
+
+## Sources
+
+- `src/code_review_cli/validation.py` (`validate_provider`, `validate_pr`, `validate_repo`, `validate_model`, `validate_level`)
+- `src/code_review_cli/prompts.py` (`build_prompt`, `_LEVEL_INSTRUCTIONS`, `_RESULT_SCHEMA`)
+- `src/code_review_cli/runner.py` (`run_review`, `_run_review_async`)
+- `src/code_review_cli/cli.py` (`main`, `_print_metrics`)
+- `src/code_review_cli/result.py` (`ReviewResult`, `exit_code`)
+- `tests/test_cli.py`
+- `tests/test_prompts.py`
+- `tests/test_runner.py`
