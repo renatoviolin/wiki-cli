@@ -183,6 +183,24 @@ finding prints as one `severity: file:line: message` line, followed by a
 `error`-severity finding was reported, `0` otherwise — advisory findings
 never affect the exit code.
 
+### Install the wiki-remember Skill
+
+```bash
+wiki install-skill
+wiki install-skill --dry-run
+wiki install-skill --force
+wiki install-skill wiki-remember --force
+```
+
+Copies the `wiki-remember` skill from `renatoviolin/wiki-cli` main branch
+(`raw.githubusercontent.com`) into `./.claude/skills/wiki-remember/SKILL.md`
+of the current checkout. Use `--dry-run` to preview without writing, and
+`--force` to overwrite an existing file. The skill is updated without
+needing a `pip install` bump — it always fetches the latest `SKILL.md` from
+GitHub `main`. If the destination file exists and is identical, the command
+reports "already up to date"; if it exists and differs without `--force`, it
+fails with "already exists (use --force)".
+
 ## What gets captured: `wiki_cli` vs `wiki-remember`
 
 `.wiki/` has a second, independent writer besides this CLI: `wiki-remember`,
