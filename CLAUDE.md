@@ -44,15 +44,14 @@ Whenever a commit is meant to ship as a new release (not every commit — only o
 
 Two independent packages under `src/`, sharing only this repository — **zero imports between them**. `code_review_cli` reviews a pull request; `wiki_cli` maintains the `.wiki/` knowledge base for the current checkout. The only coupling is a convention: the review prompt reads `.wiki/` if it happens to exist.
 
-### `wiki_cli` — six modules (plus `bundled_skills` package data)
+### `wiki_cli` — six modules
 
 - **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. The prompt body (~10KB per mode) is assembled from labelled sections — hard constraints, evidence discipline, page contract, structure, style, diagrams, finishing checks — plus one mode-specific workflow. A hard constraint in the shared preamble carves `.wiki/decisions/` out of both modes' regeneration/delete behavior and requires copying `index.md`'s "Decisions & rationale" section forward verbatim. See "Why the wiki prompt is written the way it is" below before editing any of it.
 - **`result.py`** — `WikiResult`, mirroring `ReviewResult` plus `pages_written`.
 - **`runner.py`** — the one `query()` call. Unlike `code_review_cli.runner` it uses `cwd=os.getcwd()` with **no temp workspace and no cleanup**, because it deliberately writes into the developer's real checkout.
 - **`cli.py`** — argparse with subparsers `create`/`update`/`lint`/`install-skill`. `create`/`update` take the single positional mode plus `--model`/`--verbose`; `lint` is model-free; `install-skill` is simple main-only — only `[skill]` positional (default `wiki-remember`), `--force`, `--dry-run`, no `--from`/`--ref` flags. No `validation.py`: argparse `choices` covers the only arguments, and the small model-alias map lives inline.
 - **`lint.py`** — pure mechanical checks over `.wiki/` on disk (no Claude call): `## Sources` presence and path existence, pytest-style `` `path::symbol` `` resolution, and advisory header-attributed symbol checks.
-- **`skills.py`** — `install_skill()` — fetches `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, handles `--force`/`--dry-run`, idempotent "already up to date" vs "already exists (use --force)" reporting, no SDK dependency.
-- **`bundled_skills/`** — package data snapshot of `.claude/skills/*` shipped at pip install time (kept in sync via `scripts/sync-bundled-skills.sh`).
+- **`skills.py`** — `install_skill()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, handles `--force`/`--dry-run`, idempotent "already up to date" vs "already exists (use --force)" reporting, no SDK dependency.
 
 ### `code_review_cli` — five modules
 

@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
         return _print_lint_report(lint_wiki(os.getcwd()))
 
     if args.mode == "install-skill":
-        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), source="github", repo="renatoviolin/wiki-cli", ref="main", force=args.force, dry_run=args.dry_run, all_skills=False)
+        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), force=args.force, dry_run=args.dry_run)
         if skill_result.success:
             if skill_result.message:
                 print(skill_result.message)

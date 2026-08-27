@@ -20,6 +20,3 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-wiki_cli = ["bundled_skills/**/*.md"]
