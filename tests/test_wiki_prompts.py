@@ -252,3 +252,10 @@ def test_build_prompt_carves_explicit_exception_to_wiki_only_constraint(mode):
 def test_build_prompt_includes_touched_agents_file_in_pages_written(mode):
     prompt = build_prompt(mode)
     assert "include its repository-relative path in `pages_written`" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_pointer_paragraph_is_directive_not_descriptive(mode):
+    prompt = build_prompt(mode)
+    assert "Read/Grep/Glob" in prompt
+    assert "including simple ones" in prompt

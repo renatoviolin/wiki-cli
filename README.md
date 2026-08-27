@@ -51,7 +51,7 @@ see `.wiki/wiki-cli.md` or `CLAUDE.md` for its usage. See
 ## Usage
 
 ```bash
-code-review --repo renatoviolin/purabackend --pr 29 --provider github
+code-review --repo renatoviolin/wiki-cli --pr 29 --provider github
 ```
 
 An optional `--verbose` flag streams a human-readable line per SDK message to
@@ -59,7 +59,7 @@ stderr, live, as the headless Claude Code run progresses. It has no effect on
 stdout, which always carries only the final review text on success.
 
 ```bash
-code-review --repo renatoviolin/purabackend --pr 29 --provider github --verbose
+code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --verbose
 ```
 
 An optional `--model` flag selects the model Claude Code uses for the review,
@@ -67,7 +67,7 @@ accepting the case-insensitive aliases `haiku`, `sonnet`, or `opus`. When
 omitted, Claude Code uses its own default model.
 
 ```bash
-code-review --repo renatoviolin/purabackend --pr 29 --provider github --model opus
+code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --model opus
 ```
 
 An optional `--level` flag controls review depth, accepting `light`,
@@ -80,7 +80,7 @@ coverage) and a final judge subagent that merges their findings and drops
 anything that doesn't survive an adversarial recheck.
 
 ```bash
-code-review --repo renatoviolin/purabackend --pr 29 --provider github --level hard
+code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --level hard
 ```
 
 On success, the review text is printed to stdout and the process exits 0.
