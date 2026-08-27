@@ -2,9 +2,14 @@ import argparse
 import os
 import sys
 
-from .lint import LintFinding, lint_wiki
+from .lint import lint_wiki
 from .result import WikiResult
-from .runner import run_wiki
+from .skills import install_skill
+
+try:
+    from .runner import run_wiki
+except ImportError:
+    run_wiki = None  # type: ignore
 
 _MODEL_ALIASES = {
     "haiku": "claude-haiku-4-5",
@@ -35,17 +40,26 @@ def _print_metrics(result: WikiResult, mode: str) -> None:
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wiki",
-        description=(
-            "Generate or update the .wiki knowledge base for the current repository."
-        ),
+        description="Generate or update the .wiki knowledge base for the current repository.",
     )
-    parser.add_argument("mode", choices=["create", "update", "lint"])
-    parser.add_argument("--model", default=None)
-    parser.add_argument("--verbose", action="store_true")
+    sub = parser.add_subparsers(dest="mode", required=True)
+    p_create = sub.add_parser("create", help="inventory and write .wiki from scratch")
+    p_create.add_argument("--model", default=None)
+    p_create.add_argument("--verbose", action="store_true")
+    p_update = sub.add_parser("update", help="update .wiki for changes since last wiki commit")
+    p_update.add_argument("--model", default=None)
+    p_update.add_argument("--verbose", action="store_true")
+    p_lint = sub.add_parser("lint", help="mechanical checks over .wiki on disk")
+    p_lint.add_argument("--model", default=None)
+    p_lint.add_argument("--verbose", action="store_true")
+    p_install = sub.add_parser("install-skill", help="install .claude/skills/wiki-remember from github main")
+    p_install.add_argument("skill", nargs="?", default=None, help="skill name (default: wiki-remember)")
+    p_install.add_argument("--force", action="store_true", help="overwrite existing SKILL.md")
+    p_install.add_argument("--dry-run", action="store_true", help="print what would happen without writing")
     return parser
 
 
-def _print_lint_report(findings: list[LintFinding]) -> int:
+def _print_lint_report(findings) -> int:
     for finding in findings:
         print(f"{finding.severity}: {finding.file}:{finding.line}: {finding.message}")
 
@@ -62,6 +76,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "lint":
         return _print_lint_report(lint_wiki(os.getcwd()))
 
+    if args.mode == "install-skill":
+        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), source="github", repo="renatoviolin/wiki-cli", ref="main", force=args.force, dry_run=args.dry_run, all_skills=False)
+        if skill_result.success:
+            if skill_result.message:
+                print(skill_result.message)
+            return 0
+        print(f"error: {skill_result.error or 'install failed'}", file=sys.stderr)
+        return 1
+
     model = None
     if args.model is not None:
         model = _MODEL_ALIASES.get(args.model.lower())
@@ -73,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
 
+    if run_wiki is None:
+        print("error: wiki create/update requires claude-agent-sdk (not installed)", file=sys.stderr)
+        return 1
     result: WikiResult = run_wiki(args.mode, verbose=args.verbose, model=model)
     _print_metrics(result, args.mode)
 
