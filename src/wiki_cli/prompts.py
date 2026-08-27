@@ -32,6 +32,7 @@ with the failure JSON shape described at the end.
 {writing_style}
 {diagrams}
 {finishing_checks}
+{wiki_pointer}
 Finally, reply with a JSON object matching this exact shape:
    - On success: {{"success": true, "summary": "<one short paragraph describing what you \
 wrote or changed and why>", "pages_written": ["<repo-relative path>", ...], \
@@ -42,8 +43,9 @@ wrote or changed and why>", "pages_written": ["<repo-relative path>", ...], \
 
 _HARD_CONSTRAINTS = """## Hard constraints
 
-- Write generated files only under `.wiki/`. Never modify source code, `AGENTS.md`, \
-`CLAUDE.md`, or any other file outside `.wiki/`.
+- Write generated files only under `.wiki/`, with one exception: you may add a short \
+pointer to the wiki in `CLAUDE.md` or `AGENTS.md`, per the instructions below. Never modify \
+source code or any other file outside `.wiki/`.
 - Never read or document secrets, credentials, tokens, private keys, connection strings, \
 or `.env` files. Read example or sample environment files only when their values are \
 obvious placeholders, and never copy a real-looking value into a page.
@@ -210,6 +212,27 @@ answers.
 
 """
 
+_WIKI_POINTER = """## Point the repository's agent instructions at the wiki
+
+After writing or updating `.wiki/`, check the repository root for `CLAUDE.md`, then \
+`AGENTS.md` if `CLAUDE.md` does not exist. Edit whichever one exists; if neither exists, \
+create `CLAUDE.md`. This is the one exception to "write only under `.wiki/`" above — do not \
+touch any other file outside `.wiki/`.
+
+- First check whether the file already references `.wiki/` anywhere. If it does, leave the \
+file untouched — do not add a second pointer.
+- Otherwise, insert one short paragraph, two to three sentences, noting that this \
+repository has a source-grounded knowledge base under `.wiki/`, that it should be \
+consulted — starting from `.wiki/index.md` — before exploring the codebase from scratch, \
+and that the code is authoritative where the wiki and the code disagree. Place it near the \
+top of the file, close to any other pointers to project documentation, without rewriting or \
+reformatting the rest of the file.
+- If you are creating `CLAUDE.md` from nothing, write only a top-level heading and that one \
+paragraph — do not draft other project guidance; that is outside this tool's job.
+- If you touched `CLAUDE.md` or `AGENTS.md`, include its repository-relative path in \
+`pages_written` alongside the `.wiki/` pages.
+"""
+
 _CREATE_INSTRUCTIONS = """## Workflow for this run: create
 
 Build the map before writing any prose.
@@ -287,4 +310,5 @@ def build_prompt(mode: str) -> str:
         writing_style=_WRITING_STYLE,
         diagrams=_DIAGRAMS,
         finishing_checks=_FINISHING_CHECKS,
+        wiki_pointer=_WIKI_POINTER,
     )

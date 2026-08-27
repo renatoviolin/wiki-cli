@@ -205,3 +205,37 @@ def test_build_prompt_preserves_decisions_section_in_index_verbatim(mode):
     prompt = build_prompt(mode)
     assert "## Decisions & rationale" in prompt
     assert "verbatim" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_points_claude_or_agents_md_at_wiki(mode):
+    prompt = build_prompt(mode)
+    assert "check the repository root for `CLAUDE.md`" in prompt
+    assert "`AGENTS.md` if `CLAUDE.md` does not exist" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_agents_pointer_is_idempotent(mode):
+    prompt = build_prompt(mode)
+    assert "already references `.wiki/`" in prompt
+    assert "leave the file untouched" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_agents_pointer_is_a_short_paragraph_not_a_rewrite(mode):
+    prompt = build_prompt(mode)
+    assert "two to three sentences" in prompt
+    assert "without rewriting or reformatting the rest of the file" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_carves_explicit_exception_to_wiki_only_constraint(mode):
+    prompt = build_prompt(mode)
+    assert "one exception" in prompt
+    assert "only under `.wiki/`" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_includes_touched_agents_file_in_pages_written(mode):
+    prompt = build_prompt(mode)
+    assert "include its repository-relative path in `pages_written`" in prompt
