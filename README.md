@@ -51,14 +51,6 @@ see `.wiki/wiki-cli.md` or `CLAUDE.md` for its usage. See
 ## Usage
 
 ```bash
-python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github
-```
-
-If you installed via pip (see Install above), the `code-review` console
-script does the same thing and is shorter — every `python -m
-code_review_cli.cli ...` example below also works as `code-review ...`:
-
-```bash
 code-review --repo renatoviolin/purabackend --pr 29 --provider github
 ```
 
@@ -67,7 +59,7 @@ stderr, live, as the headless Claude Code run progresses. It has no effect on
 stdout, which always carries only the final review text on success.
 
 ```bash
-python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --verbose
+code-review --repo renatoviolin/purabackend --pr 29 --provider github --verbose
 ```
 
 An optional `--model` flag selects the model Claude Code uses for the review,
@@ -75,7 +67,7 @@ accepting the case-insensitive aliases `haiku`, `sonnet`, or `opus`. When
 omitted, Claude Code uses its own default model.
 
 ```bash
-python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --model opus
+code-review --repo renatoviolin/purabackend --pr 29 --provider github --model opus
 ```
 
 An optional `--level` flag controls review depth, accepting `light`,
@@ -88,7 +80,7 @@ coverage) and a final judge subagent that merges their findings and drops
 anything that doesn't survive an adversarial recheck.
 
 ```bash
-python -m code_review_cli.cli --repo renatoviolin/purabackend --pr 29 --provider github --level hard
+code-review --repo renatoviolin/purabackend --pr 29 --provider github --level hard
 ```
 
 On success, the review text is printed to stdout and the process exits 0.
@@ -125,14 +117,6 @@ doesn't check out a PR or dispatch a review subagent.
 ### Usage
 
 ```bash
-python -m wiki_cli.cli create
-```
-
-If you installed via pip (see Install above), the `wiki` console script
-does the same thing and is shorter — every `python -m wiki_cli.cli ...`
-example below also works as `wiki ...`:
-
-```bash
 wiki create
 ```
 
@@ -141,7 +125,7 @@ it from scratch — or fully regenerates it if `.wiki/` already exists,
 rewriting what's wrong and deleting pages whose subject no longer exists.
 
 ```bash
-python -m wiki_cli.cli update
+wiki update
 ```
 
 `update` instead scopes itself to what changed since the wiki's last
@@ -152,7 +136,7 @@ Both modes accept the same optional `--model haiku|sonnet|opus` and
 `--verbose` flags as `code-review-cli`:
 
 ```bash
-python -m wiki_cli.cli update --model opus --verbose
+wiki update --model opus --verbose
 ```
 
 Both modes also add a short, idempotent pointer to `.wiki/` inside
