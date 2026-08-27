@@ -106,9 +106,12 @@ are date+slug so concurrent captures across branches don't collide on the same f
    taxonomy.
 
 After writing, update `.wiki/index.md`'s "Decisions & rationale" section (one row per
-category, same task-routing-table shape already used for structural pages) so the index stays
-accurate. This mirrors what `wiki update` already does for structural content — the index is
-never left to drift.
+decision, same task-routing-table shape already used for structural pages) so the index stays
+accurate. One row per category, rather than per decision, was considered and rejected: a
+single row per category can't carry per-decision status/file links, which the supersede
+mechanism needs — a superseded decision and the one that replaced it must each show their
+own `Status` and `File`. This mirrors what `wiki update` already does for structural content
+— the index is never left to drift.
 
 ### Superseding, not duplicating
 

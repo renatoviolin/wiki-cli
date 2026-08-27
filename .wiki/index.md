@@ -62,9 +62,7 @@ Deliberate deferrals found during this pass, not gaps in coverage:
 
 Conversation-captured decisions and rationale, logged via the `wiki-remember` skill.
 
-### wiki-remember-design
-
 | Category | Decision | Status | Captured | File |
 |---|---|---|---|---|
 | wiki-remember-design | Category chosen dynamically per finding, not a fixed storage layout | active | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-dynamic-category-per-finding.md](decisions/wiki-remember-design/2026-08-27-dynamic-category-per-finding.md) |
-| wiki-remember-design | Decision storage layout: flat log vs per-page grouping | superseded | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md](decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md) |
+| wiki-remember-design | Decisions stored as one dated file per category directory, not a flat log or per-page grouping | superseded | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md](decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md) |

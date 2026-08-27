@@ -47,11 +47,15 @@ explicitly said in this conversation.
    covering the same topic. If this new capture changes or reverses that earlier decision,
    this is a supersede case — carry the old file's path forward into step 7.
 
-6. **Derive the filename.** Slug the title into kebab-case (lowercase, spaces to hyphens,
-   strip punctuation). The path is:
+6. **Derive the filename.** Derive a short kebab-case slug from the title — the
+   distinguishing two-to-four words, not a literal character-for-character transform of the
+   full title. The path is:
    `.wiki/decisions/<category>/<date-from-step-2>-<slug>.md`
 
-7. **Write the new file** with exactly this frontmatter and body shape:
+7. **Write the new file** with exactly this frontmatter and body shape. `supersedes:` is
+   always a repo-root-relative path (e.g. `.wiki/decisions/<category>/<file>.md`) — not a
+   path relative to this file or to `.wiki/` — or `null` if this capture doesn't supersede
+   anything:
 
    ```yaml
    ---
@@ -77,13 +81,16 @@ explicitly said in this conversation.
    `docs/superpowers/specs/`.
 
 9. **Update `.wiki/index.md`.** Ensure a `## Decisions & rationale` section exists (add
-   it, near the end of the file, if this is the first-ever capture) containing a markdown
-   table — the same shape as the file's existing "Task-routing table" — with columns
-   `Category | Decision | Status | Captured | File`, one row per decision file, newest
-   `Captured` date first within each category, categories grouped together. Add a row for
-   the new file (`Status` = `active`, `File` a relative link to it). If step 8 applied,
-   edit the existing row for the superseded file in place — change only its `Status` cell
-   to `superseded` — rather than removing the row.
+   it, near the end of the file, if this is the first-ever capture) containing **one single
+   markdown table for all decisions, ever** — the same shape as the file's existing
+   "Task-routing table" — with columns `Category | Decision | Status | Captured | File`,
+   one row per decision file, newest `Captured` date first within each category, categories
+   grouped by adjacent rows sharing a `Category` column value. Do not add per-category
+   subsection headings and do not split decisions into separate tables per category — this
+   section is always exactly one table under `## Decisions & rationale`, nothing nested
+   beneath it. Add a row for the new file (`Status` = `active`, `File` a relative link to
+   it). If step 8 applied, edit the existing row for the superseded file in place — change
+   only its `Status` cell to `superseded` — rather than removing the row.
 
 10. **Never run `git commit`.** Stop after writing the files. Report back to the user, in
     one or two sentences, what was written and where — the developer reviews the diff and
