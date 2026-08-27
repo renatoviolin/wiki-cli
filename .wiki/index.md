@@ -64,5 +64,6 @@ Conversation-captured decisions and rationale, logged via the `wiki-remember` sk
 
 | Category | Decision | Status | Captured | File |
 |---|---|---|---|---|
+| wiki-remember-design | Quick, low-risk wiki-remember improvements implemented first; deeper memory tooling deferred | active | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-roadmap-quick-wins-first.md](decisions/wiki-remember-design/2026-08-27-roadmap-quick-wins-first.md) |
 | wiki-remember-design | Category chosen dynamically per finding, not a fixed storage layout | active | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-dynamic-category-per-finding.md](decisions/wiki-remember-design/2026-08-27-dynamic-category-per-finding.md) |
 | wiki-remember-design | Decisions stored as one dated file per category directory, not a flat log or per-page grouping | superseded | 2026-08-27 | [decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md](decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md) |
