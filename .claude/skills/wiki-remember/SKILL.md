@@ -58,7 +58,7 @@ explicitly said in this conversation.
    type: decision
    category: <category>
    status: active
-   supersedes: null   # or the path to the file this replaces, from step 5
+   supersedes: null   # template: use `null` or path to the file this replaces (from step 5), never copy this comment
    captured: <date-from-step-2>
    ---
 
@@ -76,13 +76,14 @@ explicitly said in this conversation.
    history stays visible, the same way superseded design docs are kept under
    `docs/superpowers/specs/`.
 
-9. **Update `.wiki/index.md`.** Ensure a `## Decisions & rationale` section exists (add it,
-   near the end of the file, if this is the first-ever capture). Under it, maintain one
-   subsection per category as a `### <category>` heading, with a bullet list of that
-   category's decision files, newest first, each bullet showing the title, a link to the
-   file, and `(superseded)` appended if its status is `superseded`. Add the new file's
-   bullet; if step 8 applied, append `(superseded)` to the old entry's existing bullet
-   rather than removing it.
+9. **Update `.wiki/index.md`.** Ensure a `## Decisions & rationale` section exists (add
+   it, near the end of the file, if this is the first-ever capture) containing a markdown
+   table — the same shape as the file's existing "Task-routing table" — with columns
+   `Category | Decision | Status | Captured | File`, one row per decision file, newest
+   `Captured` date first within each category, categories grouped together. Add a row for
+   the new file (`Status` = `active`, `File` a relative link to it). If step 8 applied,
+   edit the existing row for the superseded file in place — change only its `Status` cell
+   to `superseded` — rather than removing the row.
 
 10. **Never run `git commit`.** Stop after writing the files. Report back to the user, in
     one or two sentences, what was written and where — the developer reviews the diff and
