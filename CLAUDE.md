@@ -28,6 +28,18 @@ pytest tests/test_wiki_runner.py -v   # wiki_cli's tests are prefixed test_wiki_
 
 There is no linter or formatter configured in `pyproject.toml` — don't add `ruff`/`black`/etc. config unless asked.
 
+## Releasing
+
+Versioning is manual — no CI/automation does this. `README.md`'s install command deliberately has no `@tag` (`pip install git+https://github.com/renatoviolin/wiki-cli.git`), so every install picks up whatever is on `main` right now; there is no way to pin an older version through that command. Tags exist only as a release history, not as an install target.
+
+Whenever a commit is meant to ship as a new release (not every commit — only ones that actually change what a fresh `pip install` from `main` gives a user):
+
+1. Bump `version` in `pyproject.toml` (semantic versioning: `MAJOR.MINOR.PATCH`).
+2. Add an entry to `CHANGELOG.md` describing what changed.
+3. Commit both together.
+4. Tag the commit: `git tag -a vX.Y.Z -m "vX.Y.Z - <short summary>"`.
+5. `git push origin main --tags`.
+
 ## Architecture
 
 Two independent packages under `src/`, sharing only this repository — **zero imports between them**. `code_review_cli` reviews a pull request; `wiki_cli` maintains the `.wiki/` knowledge base for the current checkout. The only coupling is a convention: the review prompt reads `.wiki/` if it happens to exist.
