@@ -8,11 +8,12 @@ captured: 2026-08-27
 
 # Category chosen dynamically per finding, not a fixed storage layout
 
-The flat-log/per-page-grouped storage layout was superseded: the wiki-remember skill
-instead lets the skill choose the category dynamically per finding — reusing an existing
-`.wiki/decisions/<category>/` directory when a finding fits, or creating a new one when
-it doesn't — and keeps `.wiki/index.md`'s "Decisions & rationale" section in sync with
-whichever categories exist, the same way `wiki update` keeps the index in sync with
-structural pages.
+Neither the flat single-file log nor the per-structural-page grouping was adopted as the
+final storage layout. Instead, each time wiki-remember captures a finding, it works out
+the right category on the spot: if the finding matches a category directory already
+present under `.wiki/decisions/`, that directory gets reused; if not, a new one is
+created. `.wiki/index.md`'s "Decisions & rationale" section is then kept aligned with
+whatever set of categories currently exists — mirroring how `wiki update` already keeps
+that same index synchronized with the repository's structural pages.
 
 *Captured from a conversation on 2026-08-27 — not independently verified against code.*
