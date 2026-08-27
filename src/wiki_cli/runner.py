@@ -41,6 +41,16 @@ def _log_verbose_message(message) -> None:
         print(f"[message] {message!r}", file=sys.stderr)
 
 
+def _log_progress_message(message) -> None:
+    if hasattr(message, "content") and hasattr(message, "model"):
+        for block in message.content:
+            if hasattr(block, "name") and hasattr(block, "input"):
+                summary = str(block.input)
+                if len(summary) > 70:
+                    summary = summary[:70] + "..."
+                print(f"[wiki] {block.name}({summary})", file=sys.stderr)
+
+
 async def _run_wiki_async(
     mode: str, verbose: bool, model: str | None = None
 ) -> WikiResult:
@@ -59,6 +69,8 @@ async def _run_wiki_async(
         async for message in query(prompt=prompt, options=options):
             if verbose:
                 _log_verbose_message(message)
+            else:
+                _log_progress_message(message)
             if hasattr(message, "is_error"):
                 last_message = message
     except Exception as exc:

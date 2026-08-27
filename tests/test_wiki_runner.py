@@ -227,3 +227,47 @@ def test_run_wiki_default_verbose_produces_no_intermediate_output(monkeypatch, c
     runner_module.run_wiki("create")
 
     assert "Reading the repository" not in capsys.readouterr().err
+
+
+def test_run_wiki_default_progress_logs_tool_calls(monkeypatch, capsys):
+    assistant = types.SimpleNamespace(
+        content=[
+            types.SimpleNamespace(
+                name="Read", input={"file_path": "src/wiki_cli/prompts.py"}
+            )
+        ],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant, _success_message()),
+    )
+
+    runner_module.run_wiki("create")
+
+    assert "Read" in capsys.readouterr().err
+
+
+def test_run_wiki_default_progress_truncates_long_tool_input(monkeypatch, capsys):
+    long_value = "x" * 250
+    assistant = types.SimpleNamespace(
+        content=[
+            types.SimpleNamespace(name="Write", input={"content": long_value})
+        ],
+        model="claude-sonnet-5",
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "query",
+        _fake_query_factory(assistant, _success_message()),
+    )
+
+    runner_module.run_wiki("create")
+
+    err_lines = [
+        line for line in capsys.readouterr().err.splitlines() if "Write" in line
+    ]
+    assert len(err_lines) == 1
+    assert len(err_lines[0]) < 150
+    assert "..." in err_lines[0]
