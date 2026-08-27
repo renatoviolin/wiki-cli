@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit [--model haiku|sonnet|opus] [--level light|standard|hard] [--verbose]
 ```
 
-A second, independent CLI (`wiki_cli`) generates and maintains a `.wiki/` knowledge base for **the repository you are currently in**, which the review flow then reads to make better-informed reviews. It takes no repo/provider arguments — it operates on the current checkout, writes files, and stops without committing; the developer commits `.wiki/` alongside their own work.
+A second, independent CLI (`wiki_cli`) generates and maintains a `.wiki/` knowledge base for **the repository you are currently in**, which the review flow then reads to make better-informed reviews. It takes no repo/provider arguments — it operates on the current checkout, writes files, and stops without committing; the developer commits `.wiki/` alongside their own work. A separate Claude Code Skill, `wiki-remember` (`.claude/skills/wiki-remember/SKILL.md`), also writes into `.wiki/` — interactively, from conversation, capturing decisions under `.wiki/decisions/`; `wiki_cli` is instructed to leave `.wiki/decisions/` and the index's "Decisions & rationale" section alone.
 
 ```bash
 python -m wiki_cli.cli create|update [--model haiku|sonnet|opus] [--verbose]
@@ -34,7 +34,7 @@ Two independent packages under `src/`, sharing only this repository — **zero i
 
 ### `wiki_cli` — four modules
 
-- **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. The prompt body (~10KB per mode) is assembled from labelled sections — hard constraints, evidence discipline, page contract, structure, style, diagrams, finishing checks — plus one mode-specific workflow. See "Why the wiki prompt is written the way it is" below before editing any of it.
+- **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. The prompt body (~10KB per mode) is assembled from labelled sections — hard constraints, evidence discipline, page contract, structure, style, diagrams, finishing checks — plus one mode-specific workflow. A hard constraint carves `.wiki/decisions/` out of `create`'s full-regeneration/delete behavior and requires copying `index.md`'s "Decisions & rationale" section forward verbatim. See "Why the wiki prompt is written the way it is" below before editing any of it.
 - **`result.py`** — `WikiResult`, mirroring `ReviewResult` plus `pages_written`.
 - **`runner.py`** — the one `query()` call. Unlike `code_review_cli.runner` it uses `cwd=os.getcwd()` with **no temp workspace and no cleanup**, because it deliberately writes into the developer's real checkout.
 - **`cli.py`** — argparse with a single positional `create|update`. No `validation.py`: argparse `choices` covers the only argument, and the small model-alias map lives inline.

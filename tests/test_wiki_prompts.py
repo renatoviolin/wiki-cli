@@ -191,3 +191,17 @@ def test_build_prompt_derives_check_questions_from_source_not_wiki(mode):
     prompt = build_prompt(mode)
     assert "using **only** the `.wiki/` pages" in prompt
     assert "questions written while looking at the wiki" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_never_touches_decisions_directory(mode):
+    prompt = build_prompt(mode)
+    assert ".wiki/decisions/" in prompt
+    assert "Never create, rewrite, or delete anything under" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_preserves_decisions_section_in_index_verbatim(mode):
+    prompt = build_prompt(mode)
+    assert "## Decisions & rationale" in prompt
+    assert "verbatim" in prompt
