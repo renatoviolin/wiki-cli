@@ -24,9 +24,23 @@ prompt, and hands off to headless Claude Code, which checks out the PR itself
 
 ## Install
 
+From a local checkout:
+
 ```bash
 pip install -e .
 ```
+
+Directly from GitHub, pinned to a released tag:
+
+```bash
+pip install git+https://github.com/renatoviolin/wiki-cli.git@v0.1.0
+```
+
+Either install exposes two console scripts from the same `pyproject.toml`:
+`code-review` (documented below) and `wiki`, which generates and maintains
+the `.wiki/` knowledge base this repo's review prompt reads for context —
+see `.wiki/wiki-cli.md` or `CLAUDE.md` for its usage. See
+[CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Usage
 
