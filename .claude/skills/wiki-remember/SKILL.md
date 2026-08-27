@@ -31,6 +31,14 @@ explicitly said in this conversation.
    path plus symbol name (e.g. `src/wiki_cli/prompts.py` (`build_prompt`)) — never
    `file:line`, since line numbers go stale and a stale reference is itself a false claim.
 
+   Before writing, do one quick sanity check: if a structural page already exists under
+   `.wiki/` that's obviously relevant to this topic, skim it for anything that plainly
+   contradicts what you're about to capture. This is not a verification pass — one read if
+   an obviously-relevant page exists, skipped otherwise; it's not a research project, and
+   you don't need to go looking for one. If you do find a contradiction, don't silently
+   write the decision as if it settled the question — say so in your final report to the
+   user instead.
+
 2. **Resolve today's date.** Run `date +%Y-%m-%d` — never hardcode a date.
 
 3. **Survey existing categories.** Read `.wiki/index.md`'s "Decisions & rationale" section
@@ -80,7 +88,11 @@ explicitly said in this conversation.
    history stays visible, the same way superseded design docs are kept under
    `docs/superpowers/specs/`.
 
-9. **Update `.wiki/index.md`.** Ensure a `## Decisions & rationale` section exists (add
+9. **Update `.wiki/index.md`.** If `.wiki/index.md` does not exist yet, create it first
+   with a minimal header — a top-level `# <repo name>` heading and one short sentence
+   noting it documents this repository — and nothing else; do not attempt to build out a
+   full wiki structure or any structural content, that's `wiki_cli`'s job, not this skill's.
+   Ensure a `## Decisions & rationale` section exists (add
    it, near the end of the file, if this is the first-ever capture) containing **one single
    markdown table for all decisions, ever** — the same shape as the file's existing
    "Task-routing table" — with columns `Category | Decision | Status | Captured | File`,
