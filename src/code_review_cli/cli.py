@@ -41,7 +41,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr", required=True)
     parser.add_argument("--provider", required=True)
     parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--model", default=None)
+    parser.add_argument("--model", default=None, help="model alias: haiku|sonnet|opus (default: sonnet; light defaults to haiku)")
     parser.add_argument("--level", default=None)
     return parser
 
@@ -61,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if level == "light" and model is None:
         model = validate_model("haiku")
+    elif model is None:
+        model = validate_model("sonnet")
 
     result: ReviewResult = run_review(
         provider, repo, pr, verbose=args.verbose, model=model, level=level

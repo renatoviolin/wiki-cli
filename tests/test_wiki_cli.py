@@ -99,13 +99,13 @@ def test_main_resolves_model_alias(monkeypatch, capsys):
     assert captured["model"] == "claude-opus-5"
 
 
-def test_main_defaults_model_to_none(monkeypatch, capsys):
+def test_main_defaults_model_to_sonnet(monkeypatch, capsys):
     captured = {}
     monkeypatch.setattr(cli_module, "run_wiki", _fake(captured))
 
     cli_module.main(["create"])
 
-    assert captured["model"] is None
+    assert captured["model"] == "claude-sonnet-5"
 
 
 def test_main_rejects_unknown_model(monkeypatch, capsys):

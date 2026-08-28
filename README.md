@@ -64,7 +64,9 @@ code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --verbose
 
 An optional `--model` flag selects the model Claude Code uses for the review,
 accepting the case-insensitive aliases `haiku`, `sonnet`, or `opus`. When
-omitted, Claude Code uses its own default model.
+omitted, defaults to `sonnet` — `opus` is only used when explicitly passed
+via `--model opus`, avoiding silent opus token burn if the user's Claude Code
+default is opus.
 
 ```bash
 code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --model opus
@@ -72,9 +74,10 @@ code-review --repo renatoviolin/wiki-cli --pr 29 --provider github --model opus
 
 An optional `--level` flag controls review depth, accepting `light`,
 `standard`, or `hard`. `standard` is the default and reviews the PR with a
-single subagent. `light` narrows that same subagent's task to only
-high-confidence correctness and security findings, and — unless `--model` is
-also given explicitly — defaults the model to `haiku`. `hard` dispatches five
+single subagent (model defaults to `sonnet` when `--model` is not given).
+`light` narrows that same subagent's task to only high-confidence correctness
+and security findings, and — unless `--model` is also given explicitly —
+defaults the model to `haiku`. `hard` dispatches five
 specialized subagents (code review, security, performance, architecture, test
 coverage) and a final judge subagent that merges their findings and drops
 anything that doesn't survive an adversarial recheck.
@@ -133,7 +136,8 @@ commit, rewriting only the affected pages; it falls back to `create`'s
 from-scratch workflow if `.wiki/` has no prior commit history.
 
 Both modes accept the same optional `--model haiku|sonnet|opus` and
-`--verbose` flags as `code-review-cli`:
+`--verbose` flags as `code-review-cli` (defaults to `sonnet` when omitted —
+`opus` only with `--model opus`):
 
 ```bash
 wiki update --model opus --verbose

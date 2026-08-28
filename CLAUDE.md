@@ -8,12 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit [--model haiku|sonnet|opus] [--level light|standard|hard] [--verbose]
+# --model defaults to sonnet (light defaults to haiku when --model omitted); opus only with --model opus
 ```
 
 A second, independent CLI (`wiki_cli`) generates and maintains a `.wiki/` knowledge base for **the repository you are currently in**, which the review flow then reads to make better-informed reviews. It takes no repo/provider arguments — it operates on the current checkout, writes files, and stops without committing; the developer commits `.wiki/` alongside their own work. A separate Claude Code Skill, `wiki-remember` (`.claude/skills/wiki-remember/SKILL.md`), also writes into `.wiki/` — interactively, from conversation, capturing decisions under `.wiki/decisions/`; `wiki_cli` is instructed to leave `.wiki/decisions/` and the index's "Decisions & rationale" section alone.
 
 ```bash
 python -m wiki_cli.cli create|update [--model haiku|sonnet|opus] [--verbose]
+# --model defaults to sonnet; opus only with --model opus
 ```
 
 ## Commands
@@ -49,7 +51,7 @@ Two independent packages under `src/`, sharing only this repository — **zero i
 - **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. The prompt body (~10KB per mode) is assembled from labelled sections — hard constraints, evidence discipline, page contract, structure, style, diagrams, finishing checks — plus one mode-specific workflow. A hard constraint in the shared preamble carves `.wiki/decisions/` out of both modes' regeneration/delete behavior and requires copying `index.md`'s "Decisions & rationale" section forward verbatim. See "Why the wiki prompt is written the way it is" below before editing any of it.
 - **`result.py`** — `WikiResult`, mirroring `ReviewResult` plus `pages_written`.
 - **`runner.py`** — the one `query()` call. Unlike `code_review_cli.runner` it uses `cwd=os.getcwd()` with **no temp workspace and no cleanup**, because it deliberately writes into the developer's real checkout.
-- **`cli.py`** — argparse with subparsers `create`/`update`/`lint`/`install-skill`. `create`/`update` take the single positional mode plus `--model`/`--verbose`; `lint` is model-free; `install-skill` fetches from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` — only `[skill]` positional (default `wiki-remember`), `--force`, `--dry-run`, `--target claude|copilot|all` (default `all`). No `validation.py`: argparse `choices` covers the only arguments, and the small model-alias map lives inline.
+- **`cli.py`** — argparse with subparsers `create`/`update`/`lint`/`install-skill`. `create`/`update` take the single positional mode plus `--model`/`--verbose` (`--model` defaults to `sonnet`, `opus` only with `--model opus`); `lint` is model-free; `install-skill` fetches from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` — only `[skill]` positional (default `wiki-remember`), `--force`, `--dry-run`, `--target claude|copilot|all` (default `all`). No `validation.py`: argparse `choices` covers the only arguments, and the small model-alias map lives inline.
 - **`lint.py`** — pure mechanical checks over `.wiki/` on disk (no Claude call): `## Sources` presence and path existence, pytest-style `` `path::symbol` `` resolution, and advisory header-attributed symbol checks.
 - **`skills.py`** — `install_skill()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, writes to `.claude/skills/` (Claude Code) and `.github/skills/` (Copilot/VS Code) according to `--target`, handles `--force`/`--dry-run`, idempotent "already up to date" vs "already exists (use --force)" reporting, no SDK dependency.
 
@@ -61,7 +63,7 @@ Five single-responsibility modules under `src/code_review_cli/` (src-layout pack
 - **`prompts.py`** — pure string templating, no imports from the rest of the package. `build_prompt()` renders the task Claude receives: check out the PR (provider-specific `gh`/`aws` instructions), dispatch `voltagent-qa-sec:code-reviewer` via the Agent tool, then reply with JSON matching `_RESULT_SCHEMA` (`{success, review, failure_reason}`). Also carries an explicit instruction *not* to substitute a different repo/PR if the named one can't be resolved — fail closed instead.
 - **`result.py`** — `ReviewResult` dataclass: `success`, `text`, `error_message`, plus run metrics (`cost_usd`, `duration_ms`, `num_turns`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`). `exit_code()` maps `success` to 0/1.
 - **`runner.py`** — the only module that touches the Claude Agent SDK. Creates a fresh temp workspace per run (`code-review-*`), invokes `query()` with `output_format` forcing the JSON schema above, and parses the streamed messages into a `ReviewResult`. Deletes the workspace on success; leaves it in place on failure for post-mortem debugging.
-- **`cli.py`** — argparse entrypoint. Validates, calls `run_review`, prints a `[metrics] ...` summary line to **stderr** (always, regardless of outcome), then the review text to **stdout** on success or the error to stderr on failure. stdout's contract is strictly "review text only, nothing else" — verbose/metrics output must never leak onto stdout.
+- **`cli.py`** — argparse entrypoint. Validates, calls `run_review` (defaults `--model` to `sonnet` when omitted, `light` defaults to `haiku`; `opus` only with `--model opus`), prints a `[metrics] ...` summary line to **stderr** (always, regardless of outcome), then the review text to **stdout** on success or the error to stderr on failure. stdout's contract is strictly "review text only, nothing else" — verbose/metrics output must never leak onto stdout.
 
 ### Non-obvious invariants (read before touching `runner.py`)
 

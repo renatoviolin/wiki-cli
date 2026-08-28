@@ -11,6 +11,7 @@ it for context.
 
 ```bash
 python -m wiki_cli.cli create|update [--model haiku|sonnet|opus] [--verbose]
+# --model defaults to sonnet; opus only with --model opus
 python -m wiki_cli.cli lint
 ```
 
@@ -146,7 +147,9 @@ before any model resolution and returns `_print_lint_report(lint_wiki(os.getcwd(
 directly — `run_wiki` is never called, and `--model`/`--verbose` are parsed but ignored for
 this mode. For `create`/`update`, `--model` resolves through this module's own
 `_MODEL_ALIASES` dict — a separate literal from, but identical in content to,
-`code-review-cli.md`'s `validation._MODEL_ALIASES` (`haiku`/`sonnet`/`opus`). `_print_metrics`
+`code-review-cli.md`'s `validation._MODEL_ALIASES` (`haiku`/`sonnet`/`opus`), defaulting to
+`sonnet` when the flag is omitted (`opus` only with `--model opus` to avoid silent token
+burn if the user's Claude Code default is opus). `_print_metrics`
 writes a `[metrics] mode=... cost=$... ...` line to stderr unconditionally. On success,
 `result.text` (the summary) prints to stdout, followed by one line per entry in
 `result.pages_written`; on failure, `result.error_message` goes to stderr and `main`
