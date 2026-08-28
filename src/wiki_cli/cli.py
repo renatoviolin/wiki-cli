@@ -2,13 +2,13 @@ import argparse
 import os
 import sys
 
-from .lint import lint_wiki
+from .lint import LintFinding, lint_wiki
 from .result import WikiResult
 from .skills import install_skill
 
 try:
     from .runner import run_wiki
-except ImportError:
+except ModuleNotFoundError:
     run_wiki = None  # type: ignore
 
 _MODEL_ALIASES = {
@@ -60,7 +60,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _print_lint_report(findings) -> int:
+def _print_lint_report(findings: list[LintFinding]) -> int:
     for finding in findings:
         print(f"{finding.severity}: {finding.file}:{finding.line}: {finding.message}")
 
