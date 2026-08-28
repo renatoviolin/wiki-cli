@@ -44,13 +44,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="mode", required=True)
     p_create = sub.add_parser("create", help="inventory and write .wiki from scratch")
-    p_create.add_argument("--model", default=None)
+    p_create.add_argument("--model", default=None, help="model alias: haiku|sonnet|opus (default: sonnet)")
     p_create.add_argument("--verbose", action="store_true")
     p_update = sub.add_parser("update", help="update .wiki for changes since last wiki commit")
-    p_update.add_argument("--model", default=None)
+    p_update.add_argument("--model", default=None, help="model alias: haiku|sonnet|opus (default: sonnet)")
     p_update.add_argument("--verbose", action="store_true")
     p_lint = sub.add_parser("lint", help="mechanical checks over .wiki on disk")
-    p_lint.add_argument("--model", default=None)
+    p_lint.add_argument("--model", default=None, help="model alias: haiku|sonnet|opus (default: sonnet, ignored for lint)")
     p_lint.add_argument("--verbose", action="store_true")
     p_install = sub.add_parser("install-skill", help="install wiki-remember skill from github main")
     p_install.add_argument("skill", nargs="?", default=None, help="skill name (default: wiki-remember)")
@@ -96,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
+    else:
+        if args.mode in ("create", "update"):
+            model = _MODEL_ALIASES["sonnet"]
 
     if run_wiki is None:
         print("error: wiki create/update requires claude-agent-sdk (not installed)", file=sys.stderr)

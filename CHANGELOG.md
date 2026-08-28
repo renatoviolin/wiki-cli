@@ -3,6 +3,10 @@
 All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.2.1] - 2026-08-28
+
+- Default `--model` to `sonnet` in all CLI commands (`code-review`, `wiki create`, `wiki update`). `opus` is now only used when explicitly passed via `--model opus`, avoiding silent token burn if the user's Claude Code default is `opus`. `code-review --level light` still defaults to `haiku` when `--model` is omitted (cheapest). Updated `README.md`, `CLAUDE.md`, and `.wiki/` docs; `tests/test_cli.py` and `tests/test_wiki_cli.py` now assert `sonnet` default.
+
 ## [0.2.0] - 2026-08-28
 
 ### wiki_cli

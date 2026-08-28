@@ -9,6 +9,7 @@ which checks out the PR itself and dispatches the `voltagent-qa-sec:code-reviewe
 ```bash
 python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|codecommit \
   [--model haiku|sonnet|opus] [--level light|standard|hard] [--verbose]
+# --model defaults to sonnet (light defaults to haiku when --model omitted); opus only with --model opus
 ```
 
 Five single-responsibility modules under `src/code_review_cli/`, wired together by
@@ -29,7 +30,9 @@ siblings assert `run_review` was never called).
   values that could be mistaken for a CLI flag by a downstream `gh`/`aws` call.
 - `validate_model` maps the case-insensitive aliases `haiku`/`sonnet`/`opus` to concrete
   model ids (`_MODEL_ALIASES`, e.g. `"opus" → "claude-opus-5"`) and passes `None` through
-  unchanged — `cli.py` treats "no model" as "let Claude Code use its own default."
+  unchanged — `cli.py` then defaults `None` to `sonnet` (or `haiku` for `level == light`)
+  before calling `run_review`, so `opus` is only used when explicitly passed via
+  `--model opus`.
 - `validate_level` defaults `None` to `"standard"` and otherwise requires membership in
   `VALID_LEVELS = {"light", "standard", "hard"}`.
 
@@ -44,8 +47,8 @@ out) and a level-specific dispatch block from `_LEVEL_INSTRUCTIONS`:
 | Level | Dispatch instructions | Model default |
 |---|---|---|
 | `light` | One `voltagent-qa-sec:code-reviewer` subagent, explicitly told to report only high-confidence correctness/security findings and skip style/nit-level ones | `cli.py` defaults `--model` to `haiku` when not given explicitly |
-| `standard` | One `voltagent-qa-sec:code-reviewer` subagent, full scope | unchanged (whatever Claude Code defaults to) |
-| `hard` | Five subagents in sequence (`code-reviewer`, `security-auditor`, `performance-engineer`, `architect-reviewer`, `qa-expert`), each waited on in turn, then a final unnamed judge subagent given all five reports verbatim, instructed to merge duplicates and drop any finding that doesn't survive an adversarial recheck | unchanged |
+| `standard` | One `voltagent-qa-sec:code-reviewer` subagent, full scope | `cli.py` defaults `--model` to `sonnet` when not given explicitly (`opus` only with `--model opus`) |
+| `hard` | Five subagents in sequence (`code-reviewer`, `security-auditor`, `performance-engineer`, `architect-reviewer`, `qa-expert`), each waited on in turn, then a final unnamed judge subagent given all five reports verbatim, instructed to merge duplicates and drop any finding that doesn't survive an adversarial recheck | `cli.py` defaults `--model` to `sonnet` when not given explicitly (`opus` only with `--model opus`) |
 
 `standard` is byte-for-byte pinned by a golden-output test
 (`tests/test_prompts.py::test_build_prompt_standard_matches_golden_output`) — the
@@ -145,9 +148,10 @@ through `structured_output`, for post-mortem debugging
 
 ## CLI entrypoint — `cli.py`
 
-`main(argv)` parses flags with `argparse`, runs the five validators, and — only for
-`level == "light"` with no explicit `--model` — resolves `model` to `"claude-haiku-4-5"`
-via `validate_model("haiku")` before calling `run_review`. `_print_metrics` always writes
+`main(argv)` parses flags with `argparse`, runs the five validators, and resolves
+`model` to `"claude-haiku-4-5"` for `level == "light"` with no explicit `--model`,
+otherwise to `"claude-sonnet-5"` when no `--model` is given (`opus` only with
+`--model opus`), before calling `run_review`. `_print_metrics` always writes
 one `[metrics] level=... cost=$... duration=...ms turns=... input_tokens=... ...` line to
 **stderr**, regardless of success or failure. On success, `result.text` (the review) goes
 to **stdout** and `main` returns `0`; on failure, `result.error_message` goes to stderr and

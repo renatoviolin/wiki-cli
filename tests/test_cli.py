@@ -212,7 +212,7 @@ def test_main_threads_resolved_model_through_to_run_review(monkeypatch, capsys):
     assert captured["model"] == "claude-opus-5"
 
 
-def test_main_defaults_model_to_none_when_flag_is_not_given(monkeypatch, capsys):
+def test_main_defaults_model_to_sonnet_when_flag_is_not_given(monkeypatch, capsys):
     captured = {}
 
     def _fake_run_review(provider, repo, pr, verbose=False, model=None, level="standard"):
@@ -226,7 +226,7 @@ def test_main_defaults_model_to_none_when_flag_is_not_given(monkeypatch, capsys)
     )
 
     assert exit_code == 0
-    assert captured["model"] is None
+    assert captured["model"] == "claude-sonnet-5"
 
 
 def test_main_rejects_invalid_model_without_invoking_claude(monkeypatch, capsys):
@@ -380,7 +380,7 @@ def test_main_does_not_default_model_to_haiku_for_hard_level(monkeypatch, capsys
     )
 
     assert exit_code == 0
-    assert captured["model"] is None
+    assert captured["model"] == "claude-sonnet-5"
 
 
 def test_main_prints_level_in_metrics_line(monkeypatch, capsys):
