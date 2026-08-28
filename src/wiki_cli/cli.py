@@ -52,10 +52,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_lint = sub.add_parser("lint", help="mechanical checks over .wiki on disk")
     p_lint.add_argument("--model", default=None)
     p_lint.add_argument("--verbose", action="store_true")
-    p_install = sub.add_parser("install-skill", help="install .claude/skills/wiki-remember from github main")
+    p_install = sub.add_parser("install-skill", help="install wiki-remember skill from github main")
     p_install.add_argument("skill", nargs="?", default=None, help="skill name (default: wiki-remember)")
     p_install.add_argument("--force", action="store_true", help="overwrite existing SKILL.md")
     p_install.add_argument("--dry-run", action="store_true", help="print what would happen without writing")
+    p_install.add_argument("--target", choices=["claude", "copilot", "all"], default="all", help="install target: claude (.claude/skills), copilot (.github/skills), or all (default)")
     return parser
 
 
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         return _print_lint_report(lint_wiki(os.getcwd()))
 
     if args.mode == "install-skill":
-        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), force=args.force, dry_run=args.dry_run)
+        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), force=args.force, dry_run=args.dry_run, target=args.target)
         if skill_result.success:
             if skill_result.message:
                 print(skill_result.message)

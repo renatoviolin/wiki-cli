@@ -24,6 +24,51 @@ def test_install_github_fetches_and_writes(tmp_path, monkeypatch):
     result = skills.install_skill(skill="wiki-remember", target_dir=str(target))
     assert result.success is True
     assert (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").read_bytes() == fake_bytes
+    assert (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").read_bytes() == fake_bytes
+
+
+def test_install_github_target_claude_only(tmp_path, monkeypatch):
+    target = tmp_path / "repo"
+    target.mkdir()
+    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return fake_bytes
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
+    result = skills.install_skill(skill="wiki-remember", target_dir=str(target), target="claude")
+    assert result.success is True
+    assert (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
+    assert not (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
+
+
+def test_install_github_target_copilot_only(tmp_path, monkeypatch):
+    target = tmp_path / "repo"
+    target.mkdir()
+    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return fake_bytes
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
+    result = skills.install_skill(skill="wiki-remember", target_dir=str(target), target="copilot")
+    assert result.success is True
+    assert (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
+    assert not (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
 
 
 def test_install_github_404_fails(tmp_path, monkeypatch):
@@ -57,6 +102,7 @@ def test_install_github_dry_run_does_not_write(tmp_path, monkeypatch):
     result = skills.install_skill(skill="wiki-remember", target_dir=str(target), dry_run=True)
     assert result.success is True
     assert not (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
+    assert not (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
 
 
 def test_install_github_unknown_skill_404(tmp_path, monkeypatch):

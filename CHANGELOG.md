@@ -7,7 +7,7 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### wiki_cli
 
-- Add `wiki install-skill` — installs `.claude/skills/wiki-remember/SKILL.md` into the current checkout from GitHub main (`renatoviolin/wiki-cli@main` via raw.githubusercontent.com). Simple interface: `wiki install-skill [--force] [--dry-run] [skill]` — no --from/--ref flags. Supports --force, --dry-run, idempotent "already up to date" reporting.
+- Add `wiki install-skill` — installs `.claude/skills/wiki-remember/SKILL.md` (and `.github/skills/` for Copilot/VS Code) into the current checkout from GitHub main (`renatoviolin/wiki-cli@main` via raw.githubusercontent.com). Simple interface: `wiki install-skill [--force] [--dry-run] [--target claude|copilot|all] [skill]` (default `--target all`). Supports --force, --dry-run, idempotent "already up to date" reporting.
 
 ## [0.1.0] - 2026-08-27
 
