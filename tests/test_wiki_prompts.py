@@ -259,3 +259,26 @@ def test_build_prompt_pointer_paragraph_is_directive_not_descriptive(mode):
     prompt = build_prompt(mode)
     assert "Read/Grep/Glob" in prompt
     assert "including simple ones" in prompt
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_warns_context_has_no_compaction(mode):
+    prompt = build_prompt(mode)
+    assert "no automatic context compaction" in prompt.lower()
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_requires_delegating_domain_research_to_subagents(mode):
+    prompt = build_prompt(mode)
+    assert "dispatch a subagent" in prompt.lower()
+    assert "condensed" in prompt.lower()
+
+
+def test_build_prompt_create_delegates_per_domain_after_inventory():
+    prompt = build_prompt("create")
+    assert "dispatch one subagent per domain" in prompt.lower()
+
+
+def test_build_prompt_update_delegates_evidence_gate_reading():
+    prompt = build_prompt("update")
+    assert "dispatch a subagent" in prompt.lower()
