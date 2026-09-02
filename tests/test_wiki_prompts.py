@@ -282,3 +282,16 @@ def test_build_prompt_create_delegates_per_domain_after_inventory():
 def test_build_prompt_update_delegates_evidence_gate_reading():
     prompt = build_prompt("update")
     assert "dispatch a subagent" in prompt.lower()
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_pointer_is_appended_at_the_end_of_the_file(mode):
+    prompt = build_prompt(mode)
+    assert "at the end of the file" in prompt.lower()
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_build_prompt_pointer_opens_with_a_brief_description(mode):
+    prompt = build_prompt(mode)
+    assert "open with a brief description" in prompt.lower()
+    assert "source-grounded knowledge base of its architecture, domains, and operations" in prompt.lower()
