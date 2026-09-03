@@ -77,17 +77,24 @@ stops and returns the failure JSON shape instead.
 `ReviewResult`.
 
 `_run_review_async`:
-1. Creates a fresh temp directory (`tempfile.mkdtemp(prefix="code-review-")`) as the
+1. Initializes `last_message = None` before the `try` block, so it is available to the
+   `except` handler even if the SDK raises mid-stream.
+2. Creates a fresh temp directory (`tempfile.mkdtemp(prefix="code-review-")`) as the
    session's `cwd`.
-2. Calls `query(prompt=build_prompt(...), options=ClaudeAgentOptions(...))` and iterates
+3. Calls `query(prompt=build_prompt(...), options=ClaudeAgentOptions(...))` and iterates
    the async message stream, keeping only the last message that has an `is_error`
    attribute (the SDK's result message) in `last_message`.
-3. If `verbose`, every message is also passed to `_log_verbose_message`, which
+4. If `verbose`, every message is also passed to `_log_verbose_message`, which
    duck-types the message shape via `hasattr()` rather than importing SDK message classes
    — printing `[assistant]`/`[tool call]`/`[thinking]`/`[user]`/`[tool result]`/
    `[system:*]` lines to stderr as appropriate. This is why the test suite fakes SDK
    messages with `types.SimpleNamespace` instead of importing real SDK dataclasses: an SDK
    version bump only requires changes in this one function.
+5. On a normal (non-raising) stream, `_finalize_review_result(last_message)` applies the
+   `is_error` / `structured_output.success` / empty-review gates described below.
+6. If `query()` raises, the `except Exception as exc:` handler works around a known SDK
+   quirk (see "Exception handling and rate-limit detection" below) instead of just
+   stringifying the exception.
 
 `ClaudeAgentOptions` is built with `permission_mode="bypassPermissions"`, `max_turns=150`,
 `setting_sources=["user", "project"]`, and `output_format` forcing `_RESULT_SCHEMA`.
@@ -112,7 +119,7 @@ sequenceDiagram
     Session-->>SDK: final message (is_error, structured_output, model_usage, ...)
     SDK-->>Runner: final message
     alt is_error is True
-        Runner-->>Runner: ReviewResult(success=False, error_message=result/errors[0]/subtype)
+        Runner-->>Runner: ReviewResult(success=False, error_message=_extract_error_detail(msg))
     else structured_output.success is False
         Runner-->>Runner: ReviewResult(success=False, error_message=failure_reason)
     else review text is empty
@@ -124,6 +131,42 @@ sequenceDiagram
 ```
 *The runner's message loop and success/failure branching — the same shape (minus the temp
 workspace) drives `wiki-cli.md`'s runner.*
+
+### Error extraction and rate-limit detection
+
+`_finalize_review_result(message)` — the success/failure branching in the diagram above —
+delegates its `is_error` and metrics branches to two small helpers shared verbatim (aside
+from the return type) with `wiki-cli.md`'s runner:
+
+- **`_extract_error_detail(message) -> str`** tries, in order: `message.result` (if a
+  non-empty string) → `message.errors` (joined) → `message.subtype` (if set and not
+  `"success"`) → `message.api_error_status` mapped to a specific message (`429` →
+  `_MSG_RATE_LIMIT`, `529` → `_MSG_OVERLOADED`, anything else → a generic
+  `f"API error {api_error_status}: ... (subtype={subtype_str}) ..."` string) → the
+  constant `_FALLBACK_ERROR` ("Claude Code reported an error") if nothing else matched.
+- **`_extract_metrics(message) -> dict`** is the same `model_usage`-summing logic
+  described below, factored out so both the normal-completion path and the exception path
+  (next paragraph) can attach metrics to a failure result.
+
+Separately, `_run_review_async`'s `except Exception as exc:` handler works around a
+specific SDK quirk: some failures surface as a raised exception whose string contains the
+literal text `_SDK_SUCCESS_SENTINEL` ("Claude Code returned an error result: success")
+rather than as a normal result message. When that sentinel is **absent** from the
+exception string, the handler falls back to `last_message` if it was captured (using
+`_extract_error_detail`/`_extract_metrics`) or otherwise returns the raw exception text
+verbatim. When the sentinel **is present**, it treats the exception as a masked SDK-side
+error and tries to recover a specific reason from `last_message` via
+`_extract_error_detail`, falling back to `_SDK_GENERIC_FALLBACK` ("Claude Code returned an
+error — check `claude status` for usage limit or try again later") when `last_message` is
+absent or `_extract_error_detail` couldn't find anything more specific than
+`_FALLBACK_ERROR`. This is how a `429` or `529` response from the Anthropic API ends up
+surfacing as `_MSG_RATE_LIMIT`/`_MSG_OVERLOADED` instead of an opaque SDK exception string.
+
+No test in `tests/test_runner.py` currently exercises this sentinel/`api_error_status`
+path (confirmed by grepping the test file for `_SDK_SUCCESS_SENTINEL`,
+`api_error_status`, `_MSG_RATE_LIMIT`, and `_MSG_OVERLOADED` — no matches); the existing
+tests cover only the pre-existing `is_error`/`structured_output`/empty-message paths. A
+change to this logic currently has no regression coverage.
 
 Two invariants this diagram makes explicit, both called out as real production bugs fixed
 during development:
@@ -181,7 +224,7 @@ the same `tests/` directory, prefixed `test_wiki_*`).
 
 - `src/code_review_cli/validation.py` (`validate_provider`, `validate_pr`, `validate_repo`, `validate_model`, `validate_level`)
 - `src/code_review_cli/prompts.py` (`build_prompt`, `_LEVEL_INSTRUCTIONS`, `_RESULT_SCHEMA`)
-- `src/code_review_cli/runner.py` (`run_review`, `_run_review_async`)
+- `src/code_review_cli/runner.py` (`run_review`, `_run_review_async`, `_finalize_review_result`, `_extract_error_detail`, `_extract_metrics`)
 - `src/code_review_cli/cli.py` (`main`, `_print_metrics`)
 - `src/code_review_cli/result.py` (`ReviewResult`, `exit_code`)
 - `tests/test_cli.py`
