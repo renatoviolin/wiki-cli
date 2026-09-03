@@ -237,13 +237,15 @@ touch any other file outside `.wiki/`.
 
 - First check whether the file already references `.wiki/` anywhere. If it does, leave the \
 file untouched — do not add a second pointer.
-- Otherwise, insert one short paragraph, two to three sentences, that reads as an \
-instruction rather than a description: it must say to check `.wiki/index.md` first, \
-**before** using Read/Grep/Glob to explore the codebase or answering *any* question about \
-this repository — including simple ones, not only large changes — because the wiki already \
-routes to the right page for most tasks. State that the code is authoritative over the wiki \
-wherever they disagree. Place it near the top of the file, close to any other pointers to \
-project documentation, without rewriting or reformatting the rest of the file.
+- Otherwise, append one short paragraph, two to three sentences, at the end of the file, \
+after a blank line separating it from existing content, without rewriting or reformatting \
+the rest of the file. Open with a brief description: `.wiki/` is this repository's \
+source-grounded knowledge base of its architecture, domains, and operations. Then instruct \
+rather than merely describe: say to check `.wiki/index.md` first, **before** using \
+Read/Grep/Glob to explore the codebase or answering *any* question about this repository — \
+including simple ones, not only large changes — because the wiki already routes to the right \
+page for most tasks. State that the code is authoritative over the wiki wherever they \
+disagree.
 - If you are creating `CLAUDE.md` from nothing, write only a top-level heading and that one \
 paragraph — do not draft other project guidance; that is outside this tool's job.
 - If you touched `CLAUDE.md` or `AGENTS.md`, include its repository-relative path in \
