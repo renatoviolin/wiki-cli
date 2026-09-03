@@ -4,7 +4,8 @@ import sys
 
 from .lint import LintFinding, lint_wiki
 from .result import WikiResult
-from .skills import install_skill
+from .skill_gen import write_skill_files
+from .skills import DEFAULT_SKILLS, install_skill
 
 try:
     from .runner import run_wiki
@@ -52,11 +53,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_lint = sub.add_parser("lint", help="mechanical checks over .wiki on disk")
     p_lint.add_argument("--model", default=None, help="model alias: haiku|sonnet|opus (default: sonnet, ignored for lint)")
     p_lint.add_argument("--verbose", action="store_true")
-    p_install = sub.add_parser("install-skill", help="install wiki-remember skill from github main")
-    p_install.add_argument("skill", nargs="?", default=None, help="skill name (default: wiki-remember)")
+    p_install = sub.add_parser("install-skill", help="install wiki skills from github main (default: wiki-remember, wiki-create, wiki-update)")
+    p_install.add_argument("skill", nargs="?", default=None, help="skill name (default: installs wiki-remember, wiki-create, and wiki-update)")
     p_install.add_argument("--force", action="store_true", help="overwrite existing SKILL.md")
     p_install.add_argument("--dry-run", action="store_true", help="print what would happen without writing")
     p_install.add_argument("--target", choices=["claude", "copilot", "all"], default="all", help="install target: claude (.claude/skills), copilot (.github/skills), or all (default)")
+    sub.add_parser("generate-skills", help="regenerate .claude/skills/wiki-create and wiki-update SKILL.md from prompts.py (dev-only)")
     return parser
 
 
@@ -77,14 +79,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "lint":
         return _print_lint_report(lint_wiki(os.getcwd()))
 
+    if args.mode == "generate-skills":
+        for path in write_skill_files():
+            print(path)
+        return 0
+
     if args.mode == "install-skill":
-        skill_result = install_skill(skill=args.skill, target_dir=os.getcwd(), force=args.force, dry_run=args.dry_run, target=args.target)
-        if skill_result.success:
-            if skill_result.message:
-                print(skill_result.message)
-            return 0
-        print(f"error: {skill_result.error or 'install failed'}", file=sys.stderr)
-        return 1
+        names = [args.skill] if args.skill else DEFAULT_SKILLS
+        exit_code = 0
+        for name in names:
+            skill_result = install_skill(skill=name, target_dir=os.getcwd(), force=args.force, dry_run=args.dry_run, target=args.target)
+            if skill_result.success:
+                if skill_result.message:
+                    print(skill_result.message)
+            else:
+                print(f"error: {skill_result.error or 'install failed'}", file=sys.stderr)
+                exit_code = 1
+        return exit_code
 
     model = None
     if args.model is not None:

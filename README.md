@@ -187,29 +187,40 @@ finding prints as one `severity: file:line: message` line, followed by a
 `error`-severity finding was reported, `0` otherwise — advisory findings
 never affect the exit code.
 
-### Install the wiki-remember Skill
+### Install the wiki Skills
 
 ```bash
-wiki install-skill                                    # both Claude + Copilot
+wiki install-skill                                    # installs wiki-remember, wiki-create, wiki-update
 wiki install-skill --target claude                    # only .claude/skills/
 wiki install-skill --target copilot                   # only .github/skills/ (VS Code)
 wiki install-skill --dry-run
 wiki install-skill --force
-wiki install-skill wiki-remember --force --target all
+wiki install-skill wiki-create --force --target all   # install just one, by name
 ```
 
-Copies the `wiki-remember` skill from `renatoviolin/wiki-cli` main branch
-(`raw.githubusercontent.com`) into the current checkout. By default installs
-to both **Claude Code** (`./.claude/skills/wiki-remember/SKILL.md`) and
-**GitHub Copilot / VS Code** (`./.github/skills/wiki-remember/SKILL.md` —
-the `SKILL.md` format is identical for both agents; VS Code also discovers
-`.claude/skills/` but the `.github/` copy makes it explicit for Copilot).
-Use `--target claude|copilot|all` to restrict, `--dry-run` to preview without
-writing, and `--force` to overwrite an existing file. The skill is updated
-without needing a `pip install` bump — it always fetches the latest `SKILL.md`
-from GitHub `main`. If the destination file exists and is identical, the
-command reports "already up to date"; if it exists and differs without
-`--force`, it fails with "already exists (use --force)".
+Copies skills from `renatoviolin/wiki-cli` main branch
+(`raw.githubusercontent.com`) into the current checkout. With no name given,
+installs all three: `wiki-remember`, `wiki-create`, and `wiki-update`; a
+bundle-install failure on one skill still attempts the rest, and the command
+exits `1` if any of them failed. Pass a name to install just that one
+instead. By default installs to both **Claude Code**
+(`./.claude/skills/<name>/SKILL.md`) and **GitHub Copilot / VS Code**
+(`./.github/skills/<name>/SKILL.md` — the `SKILL.md` format is identical for
+both agents; VS Code also discovers `.claude/skills/` but the `.github/`
+copy makes it explicit for Copilot). Use `--target claude|copilot|all` to
+restrict, `--dry-run` to preview without writing, and `--force` to overwrite
+an existing file. Skills are updated without needing a `pip install` bump —
+installing always fetches the latest `SKILL.md` from GitHub `main`. If a
+destination file exists and is identical, the command reports "already up to
+date" for that skill; if it exists and differs without `--force`, that skill
+fails with "already exists (use --force)".
+
+`wiki-create` and `wiki-update` are the exact same prompts `wiki create` and
+`wiki update` send to the headless SDK session, just packaged so a normal
+interactive Claude Code session can run them directly — invoke with
+`/wiki-create` or `/wiki-update`, or by asking in plain language (e.g. "build
+the wiki for this repo"). `wiki-remember` is a different, independent skill —
+see the comparison below.
 
 ## What gets captured: `wiki_cli` vs `wiki-remember`
 

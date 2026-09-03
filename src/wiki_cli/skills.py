@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _DEFAULT_SKILL = "wiki-remember"
+DEFAULT_SKILLS = ["wiki-remember", "wiki-create", "wiki-update"]
 _DEFAULT_REPO = "renatoviolin/wiki-cli"
 _DEFAULT_REF = "main"
 _CLAUDE_BASE = ".claude/skills"
