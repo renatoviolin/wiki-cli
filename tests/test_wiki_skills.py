@@ -135,3 +135,29 @@ def test_install_all_write_failure_fails_that_skill(tmp_path, monkeypatch):
     for i, r in enumerate(results):
         if i != idx:
             assert r.success is True
+
+
+def test_install_all_read_failure_fails_that_skill(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen_for(_payloads()))
+    skills.install_all()
+    real_read = Path.read_bytes
+
+    def _flaky_read(self):
+        if "wiki-create" in str(self):
+            raise OSError("unreadable")
+        return real_read(self)
+
+    monkeypatch.setattr(Path, "read_bytes", _flaky_read)
+    results = skills.install_all()
+    idx = skills.DEFAULT_SKILLS.index("wiki-create")
+    assert results[idx].success is False
+    assert "failed to read" in results[idx].error.lower()
+    for i, r in enumerate(results):
+        if i != idx:
+            assert r.success is True

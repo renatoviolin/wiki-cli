@@ -43,7 +43,11 @@ def _install_one(name: str, data: bytes) -> InstallResult:
     dests_str = ", ".join(str(d) for d in dests)
     wrote = 0
     for dest in dests:
-        if dest.exists() and dest.read_bytes() == data:
+        try:
+            current = dest.read_bytes() if dest.exists() else None
+        except Exception as exc:
+            return InstallResult(success=False, error=f"failed to read {dest}: {exc}", dest=str(dest))
+        if current == data:
             continue
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -52,7 +56,7 @@ def _install_one(name: str, data: bytes) -> InstallResult:
             return InstallResult(success=False, error=f"failed to write {dest}: {exc}", dest=str(dest))
         wrote += 1
     if wrote == 0:
-        return InstallResult(success=True, message=f"{name} already up to date (4/4)", skipped=True, dest=str(dests[0]))
+        return InstallResult(success=True, message=f"{name} already up to date", skipped=True, dest=str(dests[0]))
     return InstallResult(success=True, message=f"installed {name} from github {_DEFAULT_REPO}@{_DEFAULT_REF} to {dests_str}", dest=str(dests[0]))
 
 
