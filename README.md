@@ -147,30 +147,19 @@ never affect the exit code.
 ### Install the wiki Skills
 
 ```bash
-wiki install-skill                                    # installs wiki-remember, wiki-create, wiki-update
-wiki install-skill --target claude                    # only .claude/skills/
-wiki install-skill --target copilot                   # only .github/skills/ (VS Code)
-wiki install-skill --dry-run
-wiki install-skill --force
-wiki install-skill wiki-create --force --target all   # install just one, by name
+wiki install-skill
 ```
 
 Copies skills from `renatoviolin/wiki-cli` main branch
-(`raw.githubusercontent.com`) into the current checkout. With no name given,
-installs all three: `wiki-remember`, `wiki-create`, and `wiki-update`; a
-bundle-install failure on one skill still attempts the rest, and the command
-exits `1` if any of them failed. Pass a name to install just that one
-instead. By default installs to both **Claude Code**
-(`./.claude/skills/<name>/SKILL.md`) and **GitHub Copilot / VS Code**
-(`./.github/skills/<name>/SKILL.md` — the `SKILL.md` format is identical for
-both agents; VS Code also discovers `.claude/skills/` but the `.github/`
-copy makes it explicit for Copilot). Use `--target claude|copilot|all` to
-restrict, `--dry-run` to preview without writing, and `--force` to overwrite
-an existing file. Skills are updated without needing a `pip install` bump —
-installing always fetches the latest `SKILL.md` from GitHub `main`. If a
-destination file exists and is identical, the command reports "already up to
-date" for that skill; if it exists and differs without `--force`, that skill
-fails with "already exists (use --force)".
+(`raw.githubusercontent.com`) with no parameters. Installs all three skills,
+`wiki-remember`, `wiki-create`, and `wiki-update`, to four locations: the
+current checkout (`./.claude/skills/<name>/SKILL.md` for Claude Code and
+`./.github/skills/<name>/SKILL.md` for GitHub Copilot / VS Code) and your home
+directory (`~/.claude/skills/<name>/SKILL.md`, discovered by both Claude Code
+and Copilot, plus `~/.copilot/skills/<name>/SKILL.md` for Copilot). A failure
+on one skill still attempts the rest, and the command exits `1` if any of them
+failed. Reruns fetch the latest `SKILL.md` from GitHub `main`: files that
+differ are overwritten, identical files are reported "already up to date".
 
 `wiki-remember` is a different, independent skill from `wiki-create` /
 `wiki-update` — see the comparison below.

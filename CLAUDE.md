@@ -11,7 +11,7 @@ python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|cod
 # --model defaults to sonnet (light defaults to haiku when --model omitted); opus only with --model opus
 ```
 
-Wiki content for **the repository you are currently in** is written by three skills under `.claude/skills/` — `wiki-create`, `wiki-update`, and `wiki-remember` — which the review flow then reads to make better-informed reviews. A slim companion CLI (`wiki_cli`) ships only two local helpers: `wiki lint` (mechanical checks over `.wiki/` on disk) and `wiki install-skill` (fetch the skills into a checkout from GitHub `main`).
+Wiki content for **the repository you are currently in** is written by three skills under `.claude/skills/` — `wiki-create`, `wiki-update`, and `wiki-remember` — which the review flow then reads to make better-informed reviews. A slim companion CLI (`wiki_cli`) ships only two local helpers: `wiki lint` (mechanical checks over `.wiki/` on disk) and `wiki install-skill` (bare command fetching the three skills from GitHub `main` into the checkout and your home directory).
 
 ```bash
 python -m wiki_cli.cli lint|install-skill
@@ -47,9 +47,9 @@ Two independent packages under `src/`, sharing only this repository — **zero i
 
 ### `wiki_cli` — two helpers
 
-- **`cli.py`** — argparse with subparsers `lint`/`install-skill`. `lint` takes no flags and runs the mechanical checks from `lint.py` over the current checkout; `install-skill` fetches from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` — `[skill]` positional (default: installs the bundle `DEFAULT_SKILLS` — `wiki-remember`, `wiki-create`, `wiki-update`; a name installs just that one), `--force`, `--dry-run`, `--target claude|copilot|all` (default `all`).
+- **`cli.py`** — argparse with subparsers `lint`/`install-skill`. Both take no flags: `lint` runs the mechanical checks from `lint.py` over the current checkout; bare `install-skill` installs the bundle `DEFAULT_SKILLS` (`wiki-remember`, `wiki-create`, `wiki-update`) from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` to the checkout and the home directory.
 - **`lint.py`** — pure mechanical checks over `.wiki/` on disk (no Claude call): `## Sources` presence and path existence, pytest-style `` `path::symbol` `` resolution, and advisory header-attributed symbol checks.
-- **`skills.py`** — `install_skill()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, writes to `.claude/skills/` (Claude Code) and `.github/skills/` (Copilot/VS Code) according to `--target`, handles `--force`/`--dry-run`, idempotent "already up to date" vs "already exists (use --force)" reporting, no SDK dependency. `DEFAULT_SKILLS` is the bundle `install-skill` installs when called with no name.
+- **`skills.py`** — `install_all()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, writes each skill to four roots (checkout `.claude/skills/` + `.github/skills/`, home `~/.claude/skills/` + `~/.copilot/skills/`), overwriting on differs and skipping identical files ("already up to date"), no SDK dependency.
 
 ### `code_review_cli` — five modules
 

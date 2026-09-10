@@ -3,6 +3,12 @@
 All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.0] - 2026-09-10
+
+### Changed
+
+- `wiki install-skill` is now bare (no `[skill]` positional, no `--force`/`--dry-run`/`--target`): one invocation installs `wiki-remember`, `wiki-create`, and `wiki-update` from GitHub `main` to the current checkout (`./.claude/skills/`, `./.github/skills/`) and your home directory (`~/.claude/skills/`, `~/.copilot/skills/`). Existing files are overwritten when they differ, skipped when identical.
+
 ## [0.3.0] - 2026-09-10
 
 ### Removed
