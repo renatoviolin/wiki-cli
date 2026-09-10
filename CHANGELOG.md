@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.0] - 2026-09-10
+
+### Removed
+
+- `wiki create`, `wiki update`, and `wiki generate-skills` are gone, with `src/wiki_cli/prompts.py`, `runner.py`, `result.py`, and `skill_gen.py`. Wiki content is now written exclusively by the `wiki-create` / `wiki-update` / `wiki-remember` skills under `.claude/skills/`, which are the sole source of the skill instructions.
+- `wiki` keeps two local helpers: `wiki lint` (now bare — the ignored `--model`/`--verbose` flags are gone) and `wiki install-skill` (unchanged).
+
 ## [0.2.1] - 2026-08-28
 
 - Default `--model` to `sonnet` in all CLI commands (`code-review`, `wiki create`, `wiki update`). `opus` is now only used when explicitly passed via `--model opus`, avoiding silent token burn if the user's Claude Code default is `opus`. `code-review --level light` still defaults to `haiku` when `--model` is omitted (cheapest). Updated `README.md`, `CLAUDE.md`, and `.wiki/` docs; `tests/test_cli.py` and `tests/test_wiki_cli.py` now assert `sonnet` default.

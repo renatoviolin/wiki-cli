@@ -43,10 +43,12 @@ pip install git+https://github.com/renatoviolin/wiki-cli.git
 ```
 
 Either install exposes two console scripts from the same `pyproject.toml`:
-`code-review` (documented below) and `wiki`, which generates and maintains
-the `.wiki/` knowledge base this repo's review prompt reads for context —
-see `.wiki/wiki-cli.md` or `CLAUDE.md` for its usage. See
-[CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+`code-review` (documented below) and `wiki`, which ships the two local
+helpers for the `.wiki/` knowledge base this repo's review prompt reads for
+context (`lint` and `install-skill` — see below). Wiki content itself is
+written by the `wiki-create` / `wiki-update` / `wiki-remember` skills — see
+`CLAUDE.md` for their usage. See [CHANGELOG.md](CHANGELOG.md) for what
+changed in each release.
 
 ## Usage
 
@@ -100,59 +102,17 @@ structured/JSON output, redact secrets/PII, or define the review's actual
 criteria (it dispatches the pre-existing `voltagent-qa-sec:code-reviewer`
 subagent by name). These are deferred to future work.
 
-## wiki_cli
+## wiki helpers
 
-`wiki_cli` generates and maintains a `.wiki/` knowledge base for the
-repository you're currently in. Unlike `code-review-cli`, it takes no
-`--repo`/`--pr`/`--provider` flags — it operates on the current checkout,
-writes files under `.wiki/`, and stops without committing; you review the
-diff and commit `.wiki/` alongside your own work. `code-review-cli` reads
-`.wiki/` for context when it exists, treating the code as authoritative
-wherever the two disagree, so keeping the wiki current makes reviews
-better-informed.
+Wiki content for the repository you're currently in is written by the
+`wiki-create` / `wiki-update` / `wiki-remember` skills (see `CLAUDE.md`) —
+invoke with `/wiki-create` or `/wiki-update`, or by asking in plain language
+(e.g. "build the wiki for this repo"). `code-review-cli` reads `.wiki/` for
+context when it exists, treating the code as authoritative wherever the two
+disagree, so keeping the wiki current makes reviews better-informed.
 
-### Requirements
-
-Same `claude` CLI / `ANTHROPIC_API_KEY` setup as `code-review-cli` above.
-No `gh`/AWS credentials and no subagent plugin are needed — `wiki_cli`
-doesn't check out a PR or dispatch a review subagent.
-
-### Usage
-
-```bash
-wiki create
-```
-
-`create` inventories the repository, plans the wiki's structure, and writes
-it from scratch — or fully regenerates it if `.wiki/` already exists,
-rewriting what's wrong and deleting pages whose subject no longer exists.
-
-```bash
-wiki update
-```
-
-`update` instead scopes itself to what changed since the wiki's last
-commit, rewriting only the affected pages; it falls back to `create`'s
-from-scratch workflow if `.wiki/` has no prior commit history.
-
-Both modes accept the same optional `--model haiku|sonnet|opus` and
-`--verbose` flags as `code-review-cli` (defaults to `sonnet` when omitted —
-`opus` only with `--model opus`):
-
-```bash
-wiki update --model opus --verbose
-```
-
-Both modes also add a short, idempotent pointer to `.wiki/` inside
-`CLAUDE.md` or `AGENTS.md` (whichever exists; `CLAUDE.md` is created if
-neither does), so a general Claude Code session working in the repository
-knows to consult the wiki.
-
-On success, a one-paragraph summary prints to stdout, followed by one line
-per page written, and the process exits `0`. On failure, an error prints to
-stderr and the process exits `1` (the wiki-generation run failed) or `2`
-(invalid `mode` or `--model` value — rejected before Claude Code is ever
-invoked).
+The `wiki` console script ships only two local helpers, both operating on
+the current checkout. Neither invokes Claude Code.
 
 ### Wiki linting
 
@@ -160,13 +120,11 @@ invoked).
 wiki lint
 ```
 
-`lint` is a third mode, and unlike `create`/`update` it never invokes
-Claude Code — it's a pure, instant, zero-cost mechanical check over the
-`.wiki/` pages already on disk. `create` and `update` already run it
+`lint` is a pure, instant, zero-cost mechanical check over the `.wiki/`
+pages already on disk. The `wiki-create` and `wiki-update` skills run it
 themselves as one of their own finishing checks and fix whatever it
 reports before finishing; run it directly to check `.wiki/` as it
-currently stands, without triggering a new generation session — e.g. in a
-pre-commit hook or CI.
+currently stands — e.g. in a pre-commit hook or CI.
 
 It checks three things:
 
@@ -181,9 +139,8 @@ It checks three things:
   citation from a legitimate cross-file mention inside the same section —
   it never fails the run.
 
-`--model`/`--verbose` are parsed but have no effect on this mode. Each
-finding prints as one `severity: file:line: message` line, followed by a
-`N error(s), M advisory(ies)` summary. The process exits `1` if any
+Each finding prints as one `severity: file:line: message` line, followed by
+a `N error(s), M advisory(ies)` summary. The process exits `1` if any
 `error`-severity finding was reported, `0` otherwise — advisory findings
 never affect the exit code.
 
@@ -215,16 +172,12 @@ destination file exists and is identical, the command reports "already up to
 date" for that skill; if it exists and differs without `--force`, that skill
 fails with "already exists (use --force)".
 
-`wiki-create` and `wiki-update` are the exact same prompts `wiki create` and
-`wiki update` send to the headless SDK session, just packaged so a normal
-interactive Claude Code session can run them directly — invoke with
-`/wiki-create` or `/wiki-update`, or by asking in plain language (e.g. "build
-the wiki for this repo"). `wiki-remember` is a different, independent skill —
-see the comparison below.
+`wiki-remember` is a different, independent skill from `wiki-create` /
+`wiki-update` — see the comparison below.
 
-## What gets captured: `wiki_cli` vs `wiki-remember`
+## What gets captured: `wiki-create`/`wiki-update` vs `wiki-remember`
 
-`.wiki/` has a second, independent writer besides this CLI: `wiki-remember`,
+`.wiki/` has a second, independent writer besides the structural skills: `wiki-remember`,
 an interactive Claude Code Skill (`.claude/skills/wiki-remember/SKILL.md`)
 that captures a decision or rationale from the *current conversation* on
 explicit request (e.g. "remember this in the wiki") — it never runs
@@ -232,20 +185,20 @@ proactively, and it's not a `wiki_cli` mode. Both write under `.wiki/`, but
 they capture fundamentally different kinds of knowledge, verified
 differently:
 
-| | `wiki_cli` (`create`/`update`) | `wiki-remember` (interactive Skill) |
+| | `wiki-create` / `wiki-update` (skills) | `wiki-remember` (interactive Skill) |
 |---|---|---|
 | **Captures** | WHAT the code is — architecture, module responsibilities, data flow, invariants, entrypoints, test coverage | WHY — decisions, rejected alternatives, and rationale actually discussed in a conversation |
-| **Source of truth** | Source code and tests, read directly by the headless session | The conversation itself — never independently re-derives how code behaves |
-| **Trigger** | Explicit CLI command (`wiki create`/`update`), run whenever a developer chooses | Explicit user ask mid-conversation — never invoked on its own initiative |
+| **Source of truth** | Source code and tests, read directly by the skill session | The conversation itself — never independently re-derives how code behaves |
+| **Trigger** | Explicit skill invocation, run whenever a developer chooses | Explicit user ask mid-conversation — never invoked on its own initiative |
 | **Where it writes** | `.wiki/*.md` structural pages (one per component/system) plus `index.md`'s task-routing table | One dated file per decision under `.wiki/decisions/<category>/`, plus one row in `index.md`'s "Decisions & rationale" table |
 | **Verification** | Evidence discipline (must read the entrypoint, implementation, callers, and tests before writing) plus a mechanical `wiki lint` pass (checks every page ends with a real `## Sources` section and every code citation resolves) — both enforced before the session can finish | A quick sanity check against an obviously-relevant existing page, plus a mechanical grep confirming any cited symbol exists — no full evidence-discipline pass, and it must not independently assert how code behaves |
 | **Regenerates/rewrites** | Yes — `update` re-derives affected pages from current source every run; `create` fully regenerates | No — append-only. A changed decision gets a new dated file; the old one's `status` flips to `superseded`, never edited or deleted |
 | **Example finding** | "`is_error=False` does not mean the review succeeded. A session can complete normally while the underlying task failed (bad checkout, unresolvable repo). Real success/failure comes from `structured_output.success` — checked as a second, independent gate after `is_error` — not from `is_error` alone." (`.wiki/code-review-cli.md`, verified against `runner.py`'s `_run_review_async`) | "The flat log was rejected because it doesn't scale well once many decisions accumulate. Grouping by existing structural topic pages was rejected because a conversation-derived decision doesn't always map cleanly onto one existing structural page." (`.wiki/decisions/wiki-remember-design/2026-08-27-decision-storage-layout.md` — itself later superseded, `status` flipped in place) |
 
-In short: `wiki_cli` answers "what does this code do and how is it put
-together," continuously re-verified against source; `wiki-remember` answers
-"why did we decide this," a durable record of intent that source code alone
-can't reconstruct.
+In short: `wiki-create` / `wiki-update` answer "what does this code do and
+how is it put together," continuously re-verified against source;
+`wiki-remember` answers "why did we decide this," a durable record of intent
+that source code alone can't reconstruct.
 
 ### Prior art that shaped this design
 
