@@ -23,9 +23,9 @@ Build the map before writing any prose.
 6. **Write the pages in dependency order**, documenting the systems that depend on least first and working outward toward the ones that build on them. By the time you write a system that rests on another, its foundation already has a finished page you can link to instead of re-deriving or restating it. Write `.wiki/index.md` last, once you know the real shape of what you produced.
 7. **Delete `.wiki/_plan.md`.** It is scaffolding, not documentation.
 
-Reading tests is one of the fastest ways to learn how a component is meant to be used and what its authors actually care about. Use them heavily.
+Reading tests is one of the fastest ways to learn how a component is meant to be used and what its authors actually care about. Use them heavily. If the repository has no automated test suite at all, treat runbooks, operational documentation, CI/CD or infrastructure and orchestration definitions, and the configuration modules where thresholds and defaults live as the closest substitute — they show real intended usage and execution order in the tests' absence.
 
-If `.wiki/` already exists, treat this as a full regeneration: keep the directory, rewrite what is now wrong, and delete pages whose subject no longer exists.
+If `.wiki/` already exists, treat this as an amendment: keep the directory, rewrite what is now wrong, and for a page whose subject no longer exists in the code, mark it rather than deleting it — state plainly that the subject is gone and where it used to live. Never delete an existing page, section, or table row without stopping to confirm with the developer first.
 
 
 ## Hard constraints
@@ -44,7 +44,7 @@ If `.wiki/` already exists, treat this as a full regeneration: keep the director
 This is the most important section. Documentation that is confidently wrong is worse than no documentation, because an agent will write code against it.
 
 - Do not draft prose for a page until you have actually inspected the code behind it. Manifests, READMEs, directory listings, file names, and import lines are *discovery* evidence — they tell you where to look. They are not sufficient evidence to describe behaviour.
-- For each substantial component you document, inspect: its entrypoint and how it is registered or composed; the primary implementation behind that entrypoint; its important public types, schemas, and configuration; any persistence, cache, queue, or state handling; at least one caller upstream and one dependency downstream; and its most representative tests, including what they assert and what failure they guard against.
+- For each substantial component you document, inspect: its entrypoint and how it is registered or composed; the primary implementation behind that entrypoint; its important public types, schemas, and configuration; any persistence, cache, queue, or state handling; at least one caller upstream and one dependency downstream; and its most representative tests, including what they assert and what failure they guard against — or, where no automated tests exist for it, the concrete way it is actually exercised and validated (a runbook step, a manual script, a safe dry-run command) and what output confirms it works.
 - Never state a type, field, function, route, table, column, environment variable, or command name unless you have read it in the source and are copying it exactly. If you have not verified an exact name, describe the behaviour and the flow instead of naming the symbol. A wrong name is the single most damaging error you can make here.
 - Cite evidence as a repository path plus the relevant symbol name, for example `internal/api/handler.go` (`HandleUpload`). Prefer stable paths and symbol names over line numbers: line numbers go stale within days, and a stale reference is itself a false claim.
 - Prefer accuracy over coverage. A shorter page that is entirely correct is more valuable than a thorough page containing invented detail.
@@ -73,6 +73,7 @@ Where the repository provides evidence for them, cover: what the area does and w
 - Explain *why* important code exists, not merely what each file contains.
 - Capture business and product logic, not only technical mechanics. Domain rules are usually the hardest thing for a newcomer to recover from source alone.
 - Describe tests by the behaviour and invariant they exercise, not just by their symbol name, so a future reader can find the right suite without reading a whole file.
+- If the repository has no automated test suite, make "the narrowest command that validates a change" concrete and complete: what to run, against what safe target or environment, and what signal in the output or logs confirms it worked. "Run the job" is not validation on its own.
 - Make change navigation explicit: where to start, what to watch out for, and what to run to check the change.
 - Ground each substantive page in **at least five distinct source files**, and end the page with a `## Sources` section listing them so a reader can jump straight to the evidence. This is a **structural requirement** for every substantive page, not optional formatting — this package's own `wiki lint` command checks for it, and `## Before you finish` below has you run that check. If you cannot reach five, treat that as a signal rather than a formatting problem: either the research is not finished, or the subject is too small to justify its own page and belongs merged into a neighbouring one. A genuinely small but independent component may cite fewer — say in one line why it stands alone.
 
