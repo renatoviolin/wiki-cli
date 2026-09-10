@@ -7,6 +7,8 @@ from pathlib import Path
 DEFAULT_SKILLS = ["wiki-remember", "wiki-create", "wiki-update"]
 _DEFAULT_REPO = "renatoviolin/wiki-cli"
 _DEFAULT_REF = "main"
+_FETCH_TIMEOUT_S = 5
+_SKILL_FILENAME = "SKILL.md"
 _REPO_BASES = (".claude/skills", ".github/skills")
 _HOME_BASES = (".claude/skills", ".copilot/skills")
 
@@ -21,20 +23,20 @@ class InstallResult:
 
 
 def _github_raw_url(repo: str, ref: str, skill: str) -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{ref}/.claude/skills/{skill}/SKILL.md"
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/.claude/skills/{skill}/{_SKILL_FILENAME}"
 
 
 def _fetch_github(repo: str, ref: str, skill: str) -> bytes:
     url = _github_raw_url(repo, ref, skill)
-    with urllib.request.urlopen(url, timeout=5) as resp:
+    with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT_S) as resp:
         return resp.read()
 
 
 def _dests_for_skill(name: str) -> list[Path]:
     repo = Path(os.getcwd())
     home = Path(os.path.expanduser("~"))
-    dests = [repo / base / name / "SKILL.md" for base in _REPO_BASES]
-    dests.extend(home / base / name / "SKILL.md" for base in _HOME_BASES)
+    dests = [repo / base / name / _SKILL_FILENAME for base in _REPO_BASES]
+    dests.extend(home / base / name / _SKILL_FILENAME for base in _HOME_BASES)
     return dests
 
 
