@@ -5,172 +5,133 @@ from pathlib import Path
 import wiki_cli.skills as skills
 
 
-def test_install_github_fetches_and_writes(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
+class FakeResp:
+    def __init__(self, payload: bytes):
+        self._payload = payload
 
-    class FakeResp:
-        def __enter__(self):
-            return self
+    def __enter__(self):
+        return self
 
-        def __exit__(self, *a):
-            return False
+    def __exit__(self, *args):
+        return False
 
-        def read(self):
-            return fake_bytes
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target))
-    assert result.success is True
-    assert (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").read_bytes() == fake_bytes
-    assert (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").read_bytes() == fake_bytes
+    def read(self):
+        return self._payload
 
 
-def test_install_github_target_claude_only(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
-
-    class FakeResp:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def read(self):
-            return fake_bytes
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target), target="claude")
-    assert result.success is True
-    assert (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
-    assert not (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
+def _fake_urlopen_for(payloads):
+    def _open(url, timeout=5):
+        for name, data in payloads.items():
+            if f"/{name}/SKILL.md" in url:
+                return FakeResp(data)
+        raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+    return _open
 
 
-def test_install_github_target_copilot_only(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
-
-    class FakeResp:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def read(self):
-            return fake_bytes
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target), target="copilot")
-    assert result.success is True
-    assert (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
-    assert not (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
+def _payloads():
+    return {name: f"---\nname: {name}\n---\n# {name}".encode() for name in skills.DEFAULT_SKILLS}
 
 
-def test_install_github_404_fails(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
+def _all_dests(repo: Path, home: Path, name: str):
+    return [
+        repo / ".claude" / "skills" / name / "SKILL.md",
+        repo / ".github" / "skills" / name / "SKILL.md",
+        home / ".claude" / "skills" / name / "SKILL.md",
+        home / ".copilot" / "skills" / name / "SKILL.md",
+    ]
 
-    def boom(url, timeout=5):
+
+def test_install_all_writes_twelve_files(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen_for(_payloads()))
+    results = skills.install_all()
+    assert [r.success for r in results] == [True, True, True]
+    assert all(r.skipped is False for r in results)
+    for name, data in _payloads().items():
+        for dest in _all_dests(repo, home, name):
+            assert dest.read_bytes() == data
+
+
+def test_install_all_second_run_reports_up_to_date(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen_for(_payloads()))
+    skills.install_all()
+    results = skills.install_all()
+    assert [r.success for r in results] == [True, True, True]
+    assert all(r.skipped is True for r in results)
+    assert all("already up to date" in r.message.lower() for r in results)
+
+
+def test_install_all_overwrites_differs_without_flag(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen_for(_payloads()))
+    stale = repo / ".claude" / "skills" / "wiki-remember" / "SKILL.md"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"stale content")
+    results = skills.install_all()
+    assert all(r.success for r in results)
+    assert all(r.skipped is False for r in results)
+    assert stale.read_bytes() == _payloads()["wiki-remember"]
+
+
+def test_install_all_fetch_failure_fails_that_skill_only(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+
+    def _open(url, timeout=5):
+        if "/wiki-remember/SKILL.md" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+        for name, data in _payloads().items():
+            if f"/{name}/SKILL.md" in url:
+                return FakeResp(data)
         raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
 
-    monkeypatch.setattr(urllib.request, "urlopen", boom)
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target))
-    assert result.success is False
-    assert "404" in result.error or "not found" in result.error.lower()
+    monkeypatch.setattr(urllib.request, "urlopen", _open)
+    results = skills.install_all()
+    assert results[0].success is False
+    assert "404" in results[0].error
+    assert [r.success for r in results[1:]] == [True, True]
 
 
-def test_install_github_dry_run_does_not_write(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
+def test_install_all_write_failure_fails_that_skill(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen_for(_payloads()))
+    real_write = Path.write_bytes
 
-    class FakeResp:
-        def __enter__(self):
-            return self
+    def _flaky(self, data):
+        if "wiki-create" in str(self):
+            raise OSError("disk full")
+        return real_write(self, data)
 
-        def __exit__(self, *a):
-            return False
-
-        def read(self):
-            return b"content"
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target), dry_run=True)
-    assert result.success is True
-    assert not (target / ".claude" / "skills" / "wiki-remember" / "SKILL.md").exists()
-    assert not (target / ".github" / "skills" / "wiki-remember" / "SKILL.md").exists()
-
-
-def test_install_github_unknown_skill_404(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-
-    def boom(url, timeout=5):
-        raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
-
-    monkeypatch.setattr(urllib.request, "urlopen", boom)
-    result = skills.install_skill(skill="nope", target_dir=str(target))
-    assert result.success is False
-
-
-def test_install_github_already_up_to_date(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-    fake_bytes = b"---\nname: wiki-remember\n---\n# fake"
-
-    class FakeResp:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def read(self):
-            return fake_bytes
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    skills.install_skill(skill="wiki-remember", target_dir=str(target))
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target))
-    assert result.success is True
-    assert result.skipped is True
-    assert "already up to date" in result.message.lower()
-
-
-def test_install_github_exists_needs_force(tmp_path, monkeypatch):
-    target = tmp_path / "repo"
-    target.mkdir()
-    dest = target / ".claude" / "skills" / "wiki-remember" / "SKILL.md"
-    dest.parent.mkdir(parents=True)
-    dest.write_bytes(b"old content")
-
-    class FakeResp:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def read(self):
-            return b"new content"
-
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=5: FakeResp())
-    result = skills.install_skill(skill="wiki-remember", target_dir=str(target))
-    assert result.success is False
-    assert "already exists" in result.error.lower()
-    result2 = skills.install_skill(skill="wiki-remember", target_dir=str(target), force=True)
-    assert result2.success is True
-    assert dest.read_bytes() == b"new content"
-
-
-def test_install_github_invalid_skill_name(tmp_path):
-    target = tmp_path / "repo"
-    target.mkdir()
-    result = skills.install_skill(skill="../evil", target_dir=str(target))
-    assert result.success is False
-    assert "invalid" in result.error.lower()
-    result2 = skills.install_skill(skill="a/b", target_dir=str(target))
-    assert result2.success is False
+    monkeypatch.setattr(Path, "write_bytes", _flaky)
+    results = skills.install_all()
+    idx = skills.DEFAULT_SKILLS.index("wiki-create")
+    assert results[idx].success is False
+    assert "failed to write" in results[idx].error.lower()
+    for i, r in enumerate(results):
+        if i != idx:
+            assert r.success is True
