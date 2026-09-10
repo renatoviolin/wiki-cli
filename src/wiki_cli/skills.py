@@ -1,16 +1,16 @@
 import os
-import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-_DEFAULT_SKILL = "wiki-remember"
 DEFAULT_SKILLS = ["wiki-remember", "wiki-create", "wiki-update"]
 _DEFAULT_REPO = "renatoviolin/wiki-cli"
 _DEFAULT_REF = "main"
-_CLAUDE_BASE = ".claude/skills"
-_COPILOT_BASE = ".github/skills"
+_FETCH_TIMEOUT_S = 5
+_SKILL_FILENAME = "SKILL.md"
+_REPO_BASES = (".claude/skills", ".github/skills")
+_HOME_BASES = (".claude/skills", ".copilot/skills")
 
 
 @dataclass
@@ -23,68 +23,56 @@ class InstallResult:
 
 
 def _github_raw_url(repo: str, ref: str, skill: str) -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{ref}/.claude/skills/{skill}/SKILL.md"
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/.claude/skills/{skill}/{_SKILL_FILENAME}"
 
 
 def _fetch_github(repo: str, ref: str, skill: str) -> bytes:
     url = _github_raw_url(repo, ref, skill)
-    with urllib.request.urlopen(url, timeout=5) as resp:
+    with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT_S) as resp:
         return resp.read()
 
 
-def _target_root(target_dir: str | None) -> Path:
-    if target_dir:
-        return Path(target_dir)
-    return Path(os.getcwd())
+def _dests_for_skill(name: str) -> list[Path]:
+    repo = Path(os.getcwd())
+    home = Path(os.path.expanduser("~"))
+    dests = [repo / base / name / _SKILL_FILENAME for base in _REPO_BASES]
+    dests.extend(home / base / name / _SKILL_FILENAME for base in _HOME_BASES)
+    return dests
 
 
-def install_skill(skill: str | None = None, target_dir: str | None = None, force: bool = False, dry_run: bool = False, target: str = "all") -> InstallResult:
-    name = skill or _DEFAULT_SKILL
-    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
-        return InstallResult(success=False, error=f"invalid skill name {name!r}")
-    if target not in ("claude", "copilot", "all"):
-        return InstallResult(success=False, error=f"invalid target {target!r} — must be claude, copilot, or all")
-    bases = []
-    if target in ("claude", "all"):
-        bases.append(_CLAUDE_BASE)
-    if target in ("copilot", "all"):
-        bases.append(_COPILOT_BASE)
-    url = _github_raw_url(_DEFAULT_REPO, _DEFAULT_REF, name)
-    try:
-        data = _fetch_github(_DEFAULT_REPO, _DEFAULT_REF, name)
-    except urllib.error.HTTPError as exc:
-        return InstallResult(success=False, error=f"failed to fetch {name} from github ({exc.code} {exc.reason}) — {url}")
-    except Exception as exc:
-        return InstallResult(success=False, error=f"failed to fetch {name} from github: {exc} — {url}")
-    root = _target_root(target_dir)
-    dests = [root / base / name / "SKILL.md" for base in bases]
+def _install_one(name: str, data: bytes) -> InstallResult:
+    dests = _dests_for_skill(name)
     dests_str = ", ".join(str(d) for d in dests)
-    states = []
+    wrote = 0
     for dest in dests:
-        if not dest.exists():
-            states.append("missing")
-        elif dest.read_bytes() == data:
-            states.append("up_to_date")
-        else:
-            states.append("differs")
-    if any(s == "differs" for s in states) and not force and not dry_run:
-        for dest, state in zip(dests, states):
-            if state == "differs":
-                return InstallResult(success=False, error=f"{dest} already exists (use --force to overwrite)", skipped=True, dest=str(dest))
-    if dry_run:
-        if all(s == "up_to_date" for s in states):
-            return InstallResult(success=True, message=f"{dests[0]} already up to date", skipped=True, dest=str(dests[0]))
-        return InstallResult(success=True, message=f"would install {name} from github {_DEFAULT_REPO}@{_DEFAULT_REF} to {dests_str}", dest=str(dests[0]))
-    skipped = 0
-    for dest, state in zip(dests, states):
-        if state == "up_to_date" and not force:
-            skipped += 1
+        try:
+            current = dest.read_bytes() if dest.exists() else None
+        except Exception as exc:
+            return InstallResult(success=False, error=f"failed to read {dest}: {exc}", dest=str(dest))
+        if current == data:
             continue
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(data)
         except Exception as exc:
             return InstallResult(success=False, error=f"failed to write {dest}: {exc}", dest=str(dest))
-    if skipped == len(dests):
-        return InstallResult(success=True, message=f"{dests[0]} already up to date", skipped=True, dest=str(dests[0]))
+        wrote += 1
+    if wrote == 0:
+        return InstallResult(success=True, message=f"{name} already up to date", skipped=True, dest=str(dests[0]))
     return InstallResult(success=True, message=f"installed {name} from github {_DEFAULT_REPO}@{_DEFAULT_REF} to {dests_str}", dest=str(dests[0]))
+
+
+def install_all() -> list[InstallResult]:
+    results = []
+    for name in DEFAULT_SKILLS:
+        url = _github_raw_url(_DEFAULT_REPO, _DEFAULT_REF, name)
+        try:
+            data = _fetch_github(_DEFAULT_REPO, _DEFAULT_REF, name)
+        except urllib.error.HTTPError as exc:
+            results.append(InstallResult(success=False, error=f"failed to fetch {name} from github ({exc.code} {exc.reason}) — {url}"))
+            continue
+        except Exception as exc:
+            results.append(InstallResult(success=False, error=f"failed to fetch {name} from github: {exc} — {url}"))
+            continue
+        results.append(_install_one(name, data))
+    return results

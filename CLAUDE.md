@@ -11,11 +11,10 @@ python -m code_review_cli.cli --repo <owner/repo> --pr <N> --provider github|cod
 # --model defaults to sonnet (light defaults to haiku when --model omitted); opus only with --model opus
 ```
 
-A second, independent CLI (`wiki_cli`) generates and maintains a `.wiki/` knowledge base for **the repository you are currently in**, which the review flow then reads to make better-informed reviews. It takes no repo/provider arguments — it operates on the current checkout, writes files, and stops without committing; the developer commits `.wiki/` alongside their own work. A separate Claude Code Skill, `wiki-remember` (`.claude/skills/wiki-remember/SKILL.md`), also writes into `.wiki/` — interactively, from conversation, capturing decisions under `.wiki/decisions/`; `wiki_cli` is instructed to leave `.wiki/decisions/` and the index's "Decisions & rationale" section alone.
+Wiki content for **the repository you are currently in** is written by three skills under `.claude/skills/` — `wiki-create`, `wiki-update`, and `wiki-remember` — which the review flow then reads to make better-informed reviews. A slim companion CLI (`wiki_cli`) ships only two local helpers: `wiki lint` (mechanical checks over `.wiki/` on disk) and `wiki install-skill` (bare command fetching the three skills from GitHub `main` into the checkout and your home directory).
 
 ```bash
-python -m wiki_cli.cli create|update [--model haiku|sonnet|opus] [--verbose]
-# --model defaults to sonnet; opus only with --model opus
+python -m wiki_cli.cli lint|install-skill
 ```
 
 ## Commands
@@ -25,7 +24,7 @@ pip install -e .                      # install (editable), from repo root
 pytest tests/ -v                      # run the full suite
 pytest tests/test_runner.py -v        # run one test file
 pytest tests/test_runner.py::test_run_review_returns_success_result -v   # run a single test
-pytest tests/test_wiki_runner.py -v   # wiki_cli's tests are prefixed test_wiki_*
+pytest tests/test_wiki_lint.py -v     # wiki_cli's tests are prefixed test_wiki_*
 ```
 
 There is no linter or formatter configured in `pyproject.toml` — don't add `ruff`/`black`/etc. config unless asked.
@@ -44,17 +43,13 @@ Whenever a commit is meant to ship as a new release (not every commit — only o
 
 ## Architecture
 
-Two independent packages under `src/`, sharing only this repository — **zero imports between them**. `code_review_cli` reviews a pull request; `wiki_cli` maintains the `.wiki/` knowledge base for the current checkout. The only coupling is a convention: the review prompt reads `.wiki/` if it happens to exist.
+Two independent packages under `src/`, sharing only this repository — **zero imports between them**. `code_review_cli` reviews a pull request; wiki content for the current checkout is written by the `wiki-create` / `wiki-update` / `wiki-remember` skills under `.claude/skills/`, and `wiki_cli` ships only the two local helpers those skills rely on (`lint`, `install-skill`). The only coupling is a convention: the review prompt reads `.wiki/` if it happens to exist.
 
-### `wiki_cli` — seven modules
+### `wiki_cli` — two helpers
 
-- **`prompts.py`** — `build_prompt(mode)` for `create` / `update`, plus the forced `_RESULT_SCHEMA` (`{success, summary, pages_written, failure_reason}`). The prompt has the session resolve the repo root itself (`git rev-parse --show-toplevel`) and, for `update`, find the wiki's last commit (`git log -1 --format=%H -- .wiki/`) and diff it against `HEAD` — so the wrapper still never runs git. The prompt body (~10KB per mode) is assembled from labelled sections — hard constraints, evidence discipline, page contract, structure, style, diagrams, finishing checks — plus one mode-specific workflow. A hard constraint in the shared preamble carves `.wiki/decisions/` out of both modes' regeneration/delete behavior and requires copying `index.md`'s "Decisions & rationale" section forward verbatim. See "Why the wiki prompt is written the way it is" below before editing any of it.
-- **`result.py`** — `WikiResult`, mirroring `ReviewResult` plus `pages_written`.
-- **`runner.py`** — the one `query()` call. Unlike `code_review_cli.runner` it uses `cwd=os.getcwd()` with **no temp workspace and no cleanup**, because it deliberately writes into the developer's real checkout.
-- **`cli.py`** — argparse with subparsers `create`/`update`/`lint`/`install-skill`/`generate-skills`. `create`/`update` take the single positional mode plus `--model`/`--verbose` (`--model` defaults to `sonnet`, `opus` only with `--model opus`); `lint` is model-free; `install-skill` fetches from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` — `[skill]` positional (default: installs the bundle `DEFAULT_SKILLS` — `wiki-remember`, `wiki-create`, `wiki-update`; a name installs just that one), `--force`, `--dry-run`, `--target claude|copilot|all` (default `all`); `generate-skills` is the dev-only, model-free command that (re)writes `.claude/skills/wiki-create/SKILL.md` and `wiki-update/SKILL.md` in *this* repo from `prompts.py`, to be run and committed whenever `prompts.py` changes. No `validation.py`: argparse `choices` covers the only arguments, and the small model-alias map lives inline.
+- **`cli.py`** — argparse with subparsers `lint`/`install-skill`. Both take no flags: `lint` runs the mechanical checks from `lint.py` over the current checkout; bare `install-skill` installs the bundle `DEFAULT_SKILLS` (`wiki-remember`, `wiki-create`, `wiki-update`) from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` to the checkout and the home directory.
 - **`lint.py`** — pure mechanical checks over `.wiki/` on disk (no Claude call): `## Sources` presence and path existence, pytest-style `` `path::symbol` `` resolution, and advisory header-attributed symbol checks.
-- **`skills.py`** — `install_skill()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, writes to `.claude/skills/` (Claude Code) and `.github/skills/` (Copilot/VS Code) according to `--target`, handles `--force`/`--dry-run`, idempotent "already up to date" vs "already exists (use --force)" reporting, no SDK dependency. `DEFAULT_SKILLS` is the bundle `install-skill` installs when called with no name.
-- **`skill_gen.py`** — `render_skill_md(mode)`/`write_skill_files()`: wraps `prompts.build_prompt(mode)` verbatim (JSON-closing instruction and all — deliberately the *exact same* prompt the headless CLI sends, not a reworded "interactive" variant, so there is exactly one place that tunes create/update behavior) in YAML frontmatter to produce `wiki-create`/`wiki-update`'s `SKILL.md`. Pure string/filesystem code, no SDK dependency — this is what `generate-skills` calls.
+- **`skills.py`** — `install_all()` — pure github fetch of `.claude/skills/<name>/SKILL.md` from `raw.githubusercontent.com/renatoviolin/wiki-cli/main` via `urllib`, writes each skill to four roots (checkout `.claude/skills/` + `.github/skills/`, home `~/.claude/skills/` + `~/.copilot/skills/`), overwriting on differs and skipping identical files ("already up to date"), no SDK dependency.
 
 ### `code_review_cli` — five modules
 
@@ -74,17 +69,9 @@ Five single-responsibility modules under `src/code_review_cli/` (src-layout pack
 - **`runner.py` duck-types SDK messages via `hasattr()` rather than importing SDK message classes** (`ResultMessage`, `AssistantMessage`, etc.), so an SDK version bump only requires changes in this one file. Tests follow the same convention: fakes are `types.SimpleNamespace` objects shaped like the real dataclasses, not imports of the real SDK classes.
 - **Token/cost metrics require summing across `ResultMessage.model_usage`** (a `dict[str, ModelUsage]` keyed by model name — a run can span more than one model, e.g. the orchestrator plus the dispatched subagent). Both `inputTokens`/`outputTokens` *and* `cacheReadInputTokens`/`cacheCreationInputTokens` must be summed — omitting the cache fields produces a cost/token mismatch in the metrics line (a real bug caught from a production run: cost didn't reconcile with reported tokens because cache reads/writes, which dominate cost in multi-turn sessions, weren't counted).
 
-### Why the wiki prompt is written the way it is
+### Where the wiki instructions live
 
-`wiki_cli/prompts.py` carries two instructions that look like fussy prose but are load-bearing, and both came from measurement rather than taste. We ran OpenWiki (LangChain's productized version of the same idea) against a real 63.7k-LOC Go repository and checked its output against the source. Architecture and behaviour were substantially accurate — 12 of 14 named symbols correct, the Postgres error-code claim correct and in the cited file. But roughly half the sampled *identifier* detail was invented: a type named `EvidenceFile` that didn't exist (the real one was `Evidence`), a field `sha256_hash` (real: `ContentHash`), a field `mime_type` absent from the repo entirely — all stated in exactly the same confident tone as the correct content. Full evidence in `docs/second-brain-alternatives-review.md`.
-
-Hence the prompt's **evidence discipline** section, which is the load-bearing part: manifests, READMEs and import lines are *discovery* evidence only; before writing a page you must have inspected the entrypoint, the implementation, the public types, one caller upstream and one dependency downstream, and the representative tests. And hence **never name a symbol you haven't read** — describe behaviour instead.
-
-Citations use **repository path plus symbol name** (`internal/api/handler.go` (`HandleUpload`)), deliberately *not* `file:line`. That choice came from LangChain's own production prompt, and the reasoning is sound: line numbers go stale within days, so a stale line reference is itself a false claim, while a path plus symbol stays both checkable and durable. An earlier version of this prompt required `file:line`; don't reintroduce it.
-
-The rest of the prompt's structure — skeleton-first planning into `.wiki/_plan.md`, the task-routing table in `index.md`, decomposition rules, grounded-Mermaid rules, and the finishing self-checks — was adapted from OpenWiki's shipped `dist/agent/prompts/code.js`, which is the same prompt that produced the wiki we evaluated. Worth re-reading that file if you plan substantial changes here.
-
-And hence the review prompt's rule that the code outranks the wiki, with instructions to report contradictions in the review, which is what makes the wiki self-correcting over time.
+The wiki instructions live only in `.claude/skills/wiki-create/SKILL.md`, `.claude/skills/wiki-update/SKILL.md`, and `.claude/skills/wiki-remember/SKILL.md` — there is no generator and no `prompts.py` to keep in sync. The review prompt's rule that the code outranks the wiki, with instructions to report contradictions in the review, is what makes the wiki self-correcting over time.
 
 `docs/superpowers/specs/` contains three superseded designs (`2026-08-13-second-brain-design.md`, `2026-08-19-second-brain-v2-design.md`, `2026-08-25-pr-memory-design.md`) that proposed far more elaborate versions of this — typed relation graphs, provenance ontologies, quote-verification gates, executable convention matchers. They were all cut in favour of the simple thing that exists now. They are kept as history; don't resurrect them without reading why they were dropped.
 
