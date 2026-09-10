@@ -6,44 +6,20 @@ import wiki_cli.cli as cli_module
 from wiki_cli.lint import LintFinding
 
 
-def test_main_rejects_create_mode():
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["create"],
+        ["update"],
+        ["generate-skills"],
+        ["destroy"],
+        [],
+        ["lint", "--model", "opus"],
+    ],
+)
+def test_main_rejects_removed_modes_and_flags(argv):
     with pytest.raises(SystemExit) as exc:
-        cli_module.main(["create"])
-
-    assert exc.value.code == 2
-
-
-def test_main_rejects_update_mode():
-    with pytest.raises(SystemExit) as exc:
-        cli_module.main(["update"])
-
-    assert exc.value.code == 2
-
-
-def test_main_rejects_generate_skills_mode():
-    with pytest.raises(SystemExit) as exc:
-        cli_module.main(["generate-skills"])
-
-    assert exc.value.code == 2
-
-
-def test_main_rejects_unknown_mode():
-    with pytest.raises(SystemExit) as exc:
-        cli_module.main(["destroy"])
-
-    assert exc.value.code == 2
-
-
-def test_main_requires_a_mode():
-    with pytest.raises(SystemExit) as exc:
-        cli_module.main([])
-
-    assert exc.value.code == 2
-
-
-def test_main_lint_rejects_model_flag():
-    with pytest.raises(SystemExit) as exc:
-        cli_module.main(["lint", "--model", "opus"])
+        cli_module.main(argv)
 
     assert exc.value.code == 2
 
